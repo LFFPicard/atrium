@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C \"c:/Development/VS Code/atrium\" status)",
+      "Bash(pnpm create *)",
+      "Bash(npx create-next-app@latest . --typescript --tailwind --app --src-dir --import-alias \"@/*\" --use-npm --no-turbopack --yes)",
+      "Bash(mv CLAUDE.md CLAUDE.md.bak)",
+      "Bash(npx create-next-app@15 . --typescript --tailwind --app --src-dir --import-alias \"@/*\" --use-npm --no-turbopack --yes)",
+      "Bash(mv CLAUDE.md.bak ../CLAUDE.md.bak)",
+      "Bash(mv .claude ../.claude.bak)"
+    ]
+  }
+}

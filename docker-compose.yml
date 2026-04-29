@@ -1,0 +1,13 @@
+services:
+  atrium:
+    image: lffpicard/atrium:latest
+    container_name: atrium
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - NEXTAUTH_SECRET=changeme_generate_a_real_secret
+      - NEXTAUTH_URL=https://yourdomain.com
+      - DATABASE_URL=/app/data/atrium.db
+    restart: unless-stopped
