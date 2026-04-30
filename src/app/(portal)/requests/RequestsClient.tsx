@@ -221,7 +221,7 @@ function PendingTab({ isAdmin, username }: { isAdmin: boolean; username: string 
 
 const PAGE_SIZE = 20;
 
-function AllRequestsTab({ isAdmin, username }: { isAdmin: boolean; username: string }) {
+function AllRequestsTab({ isAdmin }: { isAdmin: boolean }) {
   const [requests, setRequests] = useState<OverseerrRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -249,7 +249,7 @@ function AllRequestsTab({ isAdmin, username }: { isAdmin: boolean; username: str
     }
   }
 
-  useEffect(() => { load(0, false); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load(0, false); }, []);
 
   if (loading) return <SkeletonCards />;
   if (error) return <p className="text-sm text-(--color-text-muted) text-center py-8">{error}</p>;
@@ -299,7 +299,7 @@ export default function RequestsClient({ isAdmin, username }: { isAdmin: boolean
       {tab === 'pending' ? (
         <PendingTab isAdmin={isAdmin} username={username} />
       ) : (
-        <AllRequestsTab isAdmin={isAdmin} username={username} />
+        <AllRequestsTab isAdmin={isAdmin} />
       )}
     </div>
   );

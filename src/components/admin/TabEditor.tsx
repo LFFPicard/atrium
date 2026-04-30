@@ -161,6 +161,7 @@ export default function TabEditor({ mode, tab, onClose, onSuccess }: TabEditorPr
             </label>
             <div className="flex items-center gap-2">
               {icon && (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={icon}
                   alt=""

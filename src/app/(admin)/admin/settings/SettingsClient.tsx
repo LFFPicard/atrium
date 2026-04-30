@@ -199,7 +199,7 @@ export default function SettingsClient({ initial }: { initial: InitialSettings }
           <section>
             <h2 className="text-sm font-semibold text-(--color-text) mb-1">Colour Overrides</h2>
             <p className="text-xs text-(--color-text-muted) mb-4">
-              Customise individual colours. "Reset" restores the theme default.
+              Customise individual colours. &quot;Reset&quot; restores the theme default.
             </p>
             <div className="space-y-5">
               {VAR_GROUPS.map((group) => (

@@ -15,7 +15,12 @@
       "Bash(npx tsc *)",
       "Bash(node -e \"const p = require\\('./node_modules/next-auth/package.json'\\); const e = p.exports; console.log\\(JSON.stringify\\(Object.keys\\(e\\).filter\\(k => k.includes\\('jwt'\\)\\), null, 2\\)\\)\")",
       "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({**d.get\\('dependencies',{}\\), **d.get\\('devDependencies',{}\\)}, indent=2\\)\\)\")",
-      "Bash(node -e \"require\\('recharts'\\)\")"
+      "Bash(node -e \"require\\('recharts'\\)\")",
+      "Bash(DATABASE_URL=/tmp/atrium-gen-check.db npm run db:generate)",
+      "Bash(DATABASE_URL=\"$\\(pwd\\)/data/atrium.db\" NEXTAUTH_SECRET=\"test-secret-for-start-check\" NEXTAUTH_URL=\"http://localhost:3000\" npm run start)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/)",
+      "Bash(kill %1)",
+      "Bash(npx kill-port *)"
     ]
   }
 }

@@ -42,13 +42,41 @@ CREATE TABLE `subscriptions` (
 --> statement-breakpoint
 CREATE TABLE `tabs` (
 	`id` text PRIMARY KEY NOT NULL,
+	`slug` text DEFAULT '' NOT NULL,
 	`label` text NOT NULL,
 	`url` text NOT NULL,
-	`icon` text NOT NULL,
+	`icon` text DEFAULT '' NOT NULL,
 	`order` integer NOT NULL,
 	`min_role` text DEFAULT 'user' NOT NULL,
 	`open_in_iframe` integer DEFAULT true NOT NULL,
 	`enabled` integer DEFAULT true NOT NULL
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `tabs_slug_unique` ON `tabs` (`slug`);--> statement-breakpoint
+CREATE TABLE `uptime_checks` (
+	`id` text PRIMARY KEY NOT NULL,
+	`service_name` text NOT NULL,
+	`service_type` text NOT NULL,
+	`module_slug` text,
+	`url` text NOT NULL,
+	`enabled` integer DEFAULT true NOT NULL,
+	`interval_minutes` integer DEFAULT 15 NOT NULL,
+	`consecutive_failures` integer DEFAULT 0 NOT NULL,
+	`last_status` text DEFAULT 'unknown' NOT NULL,
+	`last_checked_at` integer,
+	`last_notified_at` integer,
+	`notify_email` integer DEFAULT false NOT NULL,
+	`notify_webhook` integer DEFAULT false NOT NULL,
+	`public` integer DEFAULT false NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE `uptime_events` (
+	`id` text PRIMARY KEY NOT NULL,
+	`check_id` text NOT NULL,
+	`status` text NOT NULL,
+	`response_ms` integer,
+	`checked_at` integer NOT NULL,
+	FOREIGN KEY (`check_id`) REFERENCES `uptime_checks`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
 CREATE TABLE `users` (
@@ -60,7 +88,8 @@ CREATE TABLE `users` (
 	`plex_token` text,
 	`jellyfin_user_id` text,
 	`avatar_url` text,
-	`created_at` integer NOT NULL
+	`created_at` integer NOT NULL,
+	`must_change_password` integer DEFAULT false NOT NULL
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `users_username_unique` ON `users` (`username`);--> statement-breakpoint

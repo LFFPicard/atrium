@@ -152,6 +152,7 @@ function TabIcon({ icon, collapsed }: { icon: string; collapsed: boolean }) {
   const cls = `${collapsed ? 'w-5 h-5' : 'w-5 h-5'} rounded object-contain shrink-0`;
   if (icon && (icon.startsWith('http') || icon.startsWith('/'))) {
     return (
+      // eslint-disable-next-line @next/next/no-img-element
       <img
         src={icon}
         alt=""

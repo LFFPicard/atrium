@@ -5,29 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1777463833920,
-      "tag": "0000_sharp_skrulls",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1777485252805,
-      "tag": "0001_elite_sprite",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1777485721241,
-      "tag": "0002_green_mentor",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1777487662779,
-      "tag": "0003_black_black_bolt",
+      "when": 1777563470298,
+      "tag": "0000_greedy_payback",
       "breakpoints": true
     }
   ]

@@ -94,7 +94,7 @@ export function sendMessage(
     .run();
 }
 
-export function markAsRead(id: string, _userId: string): void {
+export function markAsRead(id: string): void {
   db.update(messages).set({ read: true }).where(eq(messages.id, id)).run();
 }
 

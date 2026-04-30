@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth/config';
 import { getAllUsers, createUser, type UserRow } from '@/lib/users';
 
-function stripSensitive(user: UserRow) {
-  const { plexToken: _pt, jellyfinUserId: _ju, ...safe } = user;
+function stripSensitive({ plexToken, jellyfinUserId, ...safe }: UserRow) {
+  void plexToken; void jellyfinUserId;
   return safe;
 }
 

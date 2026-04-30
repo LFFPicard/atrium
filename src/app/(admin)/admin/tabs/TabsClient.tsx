@@ -21,6 +21,7 @@ function reorder(items: TabRow[], fromId: string, beforeId: string): TabRow[] {
 function TabIcon({ icon }: { icon: string }) {
   if (icon && (icon.startsWith('http') || icon.startsWith('/'))) {
     return (
+      // eslint-disable-next-line @next/next/no-img-element
       <img
         src={icon}
         alt=""
@@ -234,7 +235,7 @@ export default function TabsClient({ initialTabs }: { initialTabs: TabRow[] }) {
       <div className="bg-(--color-surface) border border-(--color-border) rounded-xl overflow-hidden">
         {tabs.length === 0 ? (
           <div className="px-4 py-12 text-center text-sm text-(--color-text-muted)">
-            No tabs yet. Click "Add Tab" to add your first service.
+            No tabs yet. Click &quot;Add Tab&quot; to add your first service.
           </div>
         ) : (
           tabs.map((tab) => (

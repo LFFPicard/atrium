@@ -20,7 +20,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 
   if (!msg.read && (isRecipient || isAdmin)) {
-    markAsRead(id, userId);
+    markAsRead(id);
   }
 
   return NextResponse.json({ ...msg, read: true });

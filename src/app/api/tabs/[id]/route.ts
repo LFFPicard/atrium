@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth/config';
-import { updateTab, deleteTab, getAllTabs } from '@/lib/tabs';
+import { updateTab, deleteTab } from '@/lib/tabs';
 import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db';
 import { tabs } from '@/lib/db/schema';

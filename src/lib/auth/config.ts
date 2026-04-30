@@ -6,14 +6,20 @@ import { db } from '@/lib/db';
 import { users } from '@/lib/db/schema';
 
 const DEFAULT_SECRET = 'changeme_generate_a_real_secret';
-const secret = process.env.NEXTAUTH_SECRET;
-if (!secret || secret === DEFAULT_SECRET) {
-  const msg = !secret
-    ? '[atrium] SECURITY: NEXTAUTH_SECRET is not set. Sessions will be insecure. Generate one with: openssl rand -base64 32'
-    : '[atrium] SECURITY: NEXTAUTH_SECRET is still the default placeholder. Replace it immediately: openssl rand -base64 32';
-  console.error(msg);
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('NEXTAUTH_SECRET must be changed from its default value before running in production.');
+
+let _secretChecked = false;
+function validateSecretOnce() {
+  if (_secretChecked) return;
+  _secretChecked = true;
+  const secret = process.env.NEXTAUTH_SECRET;
+  if (!secret || secret === DEFAULT_SECRET) {
+    const msg = !secret
+      ? '[atrium] SECURITY: NEXTAUTH_SECRET is not set. Generate one with: openssl rand -base64 32'
+      : '[atrium] SECURITY: NEXTAUTH_SECRET is still the default placeholder. Replace it immediately: openssl rand -base64 32';
+    console.error(msg);
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('NEXTAUTH_SECRET must be changed from its default value before running in production.');
+    }
   }
 }
 
@@ -36,6 +42,7 @@ declare module '@auth/core/jwt' {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  trustHost: true,
   providers: [
     Credentials({
       credentials: {
@@ -68,6 +75,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     jwt({ token, user }) {
+      validateSecretOnce();
       if (user) {
         token.id = user.id!;
         token.role = user.role;

@@ -360,7 +360,7 @@ function MessageDetail({
 
 // ── Main Component ────────────────────────────────────────────────────────────
 
-export default function MessagesClient({ userId, userRole, username: _username, allUsers }: Props) {
+export default function MessagesClient({ userId, userRole, allUsers }: Props) {
   const isAdmin = userRole === 'admin';
 
   const [messages, setMessages] = useState<MessageWithUsers[]>([]);
