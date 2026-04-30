@@ -41,7 +41,7 @@ async function testTautulli(config: Record<string, string>): Promise<TestResult>
   const { tautulli_url: url, tautulli_api_key: key } = config;
   if (!url || !key) return { success: false, message: 'Missing required config' };
   try {
-    const res = await fetchWithTimeout(`${base(url)}/api?apikey=${encodeURIComponent(key)}&cmd=get_server_info`);
+    const res = await fetchWithTimeout(`${base(url)}/api/v2?apikey=${encodeURIComponent(key)}&cmd=get_server_info`);
     if (!res.ok) return httpError(res);
     const json = await res.json() as {
       response?: { result?: string; message?: string; data?: { pms_version?: string } };

@@ -91,7 +91,7 @@ export async function GET(req: NextRequest) {
     }
 
     const timeout = STAT_CMDS.has(cmd) ? 20_000 : 8_000;
-    const res = await fetch(`${tautulliBase}/api?${params}`, {
+    const res = await fetch(`${tautulliBase}/api/v2?${params}`, {
       signal: AbortSignal.timeout(timeout),
     });
     if (!res.ok) {
