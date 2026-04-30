@@ -2,27 +2,38 @@
 
 import { useState, useEffect } from 'react';
 
-interface OverseerrUser {
+interface SeerrUser {
   id: number;
   username: string;
   displayName?: string;
 }
 
-interface OverseerrMedia {
+interface SeerrMedia {
   id: number;
   mediaType: string;
-  posterPath?: string;
   tmdbId: number;
+}
+
+interface SeerrMovieDetails {
+  id: number;
   title?: string;
+  posterPath?: string;
+}
+
+interface SeerrTvDetails {
+  id: number;
   name?: string;
+  posterPath?: string;
 }
 
 interface OverseerrRequest {
   id: number;
   status: number;
   type: 'movie' | 'tv';
-  media: OverseerrMedia;
-  requestedBy: OverseerrUser;
+  media: SeerrMedia;
+  movie?: SeerrMovieDetails;
+  tvShow?: SeerrTvDetails;
+  requestedBy: SeerrUser;
   createdAt: string;
 }
 
@@ -48,7 +59,12 @@ function formatDate(iso: string): string {
 }
 
 function getTitle(req: OverseerrRequest): string {
-  return req.media.title ?? req.media.name ?? `${req.type === 'movie' ? 'Movie' : 'TV'} #${req.media.tmdbId}`;
+  if (req.type === 'movie') return req.movie?.title ?? `Movie #${req.media.tmdbId}`;
+  return req.tvShow?.name ?? `TV #${req.media.tmdbId}`;
+}
+
+function getPosterPath(req: OverseerrRequest): string | undefined {
+  return req.type === 'movie' ? req.movie?.posterPath : req.tvShow?.posterPath;
 }
 
 function PosterImage({ posterPath, title }: { posterPath?: string; title: string }) {
@@ -97,7 +113,7 @@ function RequestCard({
 
   return (
     <div className="flex items-start gap-3 p-4 rounded-xl bg-(--color-surface) border border-(--color-border)">
-      <PosterImage posterPath={request.media.posterPath} title={title} />
+      <PosterImage posterPath={getPosterPath(request)} title={title} />
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-2 mb-1.5">
           <p className="font-semibold text-(--color-text) text-sm leading-snug line-clamp-2">{title}</p>

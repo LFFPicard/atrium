@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth/config';
 import PortalShell from '@/components/layout/PortalShell';
 import { getAllModules } from '@/lib/modules';
 import { getAllTabs } from '@/lib/tabs';
+import { getSettings } from '@/lib/settings';
 import type { TabRow } from '@/lib/tabs';
 
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
@@ -22,8 +23,16 @@ export default async function PortalLayout({ children }: { children: React.React
   const allTabs = getAllTabs();
   const enabledTabs: TabRow[] = allTabs.filter((t) => t.enabled);
 
+  const raw = getSettings(['donation_enabled', 'donation_placement', 'donation_url', 'donation_label']);
+  const donation = {
+    enabled: (raw.donation_enabled as boolean) ?? false,
+    placement: (raw.donation_placement as string) ?? 'sidebar',
+    url: (raw.donation_url as string) ?? '',
+    label: (raw.donation_label as string) ?? '',
+  };
+
   return (
-    <PortalShell user={user} enabledModuleSlugs={enabledModuleSlugs} tabs={enabledTabs}>
+    <PortalShell user={user} enabledModuleSlugs={enabledModuleSlugs} tabs={enabledTabs} donation={donation}>
       {children}
     </PortalShell>
   );

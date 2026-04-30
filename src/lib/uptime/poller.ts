@@ -8,6 +8,7 @@ let started = false;
 export function startPoller(): void {
   if (started) return;
   started = true;
+  console.log('[atrium] uptime poller started');
 
   const tick = async () => {
     const now = Math.floor(Date.now() / 1000);

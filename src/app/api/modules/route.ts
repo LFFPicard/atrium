@@ -85,5 +85,14 @@ export async function POST(req: NextRequest) {
   const finalRecord = getModule(slug);
   syncModuleUptimeCheck(slug, finalRecord.enabled, finalRecord.config);
 
+  // When the uptime module itself is enabled, retroactively sync all other modules
+  if (slug === 'uptime' && enabled) {
+    for (const def of MODULE_DEFINITIONS) {
+      if (def.slug === 'uptime') continue;
+      const r = getModule(def.slug);
+      syncModuleUptimeCheck(def.slug, r.enabled, r.config);
+    }
+  }
+
   return NextResponse.json({ ok: true });
 }

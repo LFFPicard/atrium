@@ -19,13 +19,7 @@ export default async function MessagesPage() {
     : [];
 
   return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold text-(--color-text)">Messages</h1>
-        <p className="text-sm text-(--color-text-muted) mt-0.5">
-          {isAdmin ? 'All messages across Atrium.' : 'Send a message to your admin.'}
-        </p>
-      </div>
+    <div className="-m-6 h-[calc(100vh-56px)] overflow-hidden">
       <MessagesClient
         userId={userId}
         userRole={session.user.role}

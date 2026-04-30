@@ -1,10 +1,27 @@
 interface DonationWidgetProps {
   url: string;
   label: string;
+  compact?: boolean;
 }
 
-export default function DonationWidget({ url, label }: DonationWidgetProps) {
+export default function DonationWidget({ url, label, compact = false }: DonationWidgetProps) {
   if (!url) return null;
+
+  if (compact) {
+    return (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-sm font-medium text-(--color-sidebar-text) hover:text-(--color-text) hover:bg-(--color-surface) transition-colors w-full"
+      >
+        <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-(--color-accent) shrink-0">
+          <path d="M12 21.593c-.525-.438-10.56-8.7-10.56-13.093a6.56 6.56 0 0112.56-2.563 6.56 6.56 0 0112.56 2.563c0 4.393-10.035 12.655-10.56 13.093z" />
+        </svg>
+        <span className="truncate">{label || 'Support this server'}</span>
+      </a>
+    );
+  }
 
   return (
     <div className="bg-(--color-surface) border border-(--color-border) rounded-xl p-4 flex items-center gap-4">

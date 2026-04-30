@@ -16,6 +16,7 @@ interface InitialSettings {
   donation_provider: string;
   donation_url: string;
   donation_label: string;
+  donation_placement: string;
   site_name: string;
   admin_email: string;
 }
@@ -73,6 +74,7 @@ export default function SettingsClient({ initial }: { initial: InitialSettings }
   const [donationProvider, setDonationProvider] = useState(initial.donation_provider);
   const [donationUrl, setDonationUrl] = useState(initial.donation_url);
   const [donationLabel, setDonationLabel] = useState(initial.donation_label);
+  const [donationPlacement, setDonationPlacement] = useState(initial.donation_placement);
 
   const [siteName, setSiteName] = useState(initial.site_name);
   const [adminEmail, setAdminEmail] = useState(initial.admin_email);
@@ -124,6 +126,7 @@ export default function SettingsClient({ initial }: { initial: InitialSettings }
           donation_provider: donationProvider,
           donation_url: donationUrl,
           donation_label: donationLabel,
+          donation_placement: donationPlacement,
           site_name: siteName,
           admin_email: adminEmail,
         }),
@@ -339,6 +342,23 @@ export default function SettingsClient({ initial }: { initial: InitialSettings }
               placeholder="Support Atrium"
               className="w-full bg-(--color-surface) border border-(--color-border) rounded-lg px-3 py-2 text-sm text-(--color-text) placeholder:text-(--color-text-muted) focus:outline-none focus:border-(--color-accent) disabled:opacity-50"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-(--color-text) mb-1.5">Placement</label>
+            <select
+              value={donationPlacement}
+              onChange={(e) => setDonationPlacement(e.target.value)}
+              disabled={!donationEnabled}
+              className="w-full bg-(--color-surface) border border-(--color-border) rounded-lg px-3 py-2 text-sm text-(--color-text) focus:outline-none focus:border-(--color-accent) disabled:opacity-50"
+            >
+              <option value="sidebar">Sidebar (above user section)</option>
+              <option value="footer">Footer (bottom of page)</option>
+              <option value="dashboard">Dashboard (widget)</option>
+            </select>
+            <p className="mt-1 text-xs text-(--color-text-muted)">
+              Where the donation button appears for users.
+            </p>
           </div>
         </div>
       )}

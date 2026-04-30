@@ -59,7 +59,7 @@ function SessionCard({ s }: { s: TautulliSession }) {
 
   return (
     <div className="flex items-start gap-3 p-3 bg-(--color-bg) rounded-lg">
-      <div className="relative shrink-0 w-10 h-[60px] rounded overflow-hidden bg-(--color-border)">
+      <div className="relative shrink-0 w-10 h-15 rounded overflow-hidden bg-(--color-border)">
         {thumb && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={imgUrl(thumb, 64, 96)} alt="" className="w-full h-full object-cover" />
@@ -92,7 +92,7 @@ function SessionCard({ s }: { s: TautulliSession }) {
 function SkeletonCard() {
   return (
     <div className="flex gap-3 p-3 bg-(--color-bg) rounded-lg animate-pulse">
-      <div className="w-10 h-[60px] bg-(--color-border) rounded shrink-0" />
+      <div className="w-10 h-15 bg-(--color-border) rounded shrink-0" />
       <div className="flex-1 space-y-2 py-1">
         <div className="h-3 bg-(--color-border) rounded w-3/4" />
         <div className="h-2 bg-(--color-border) rounded w-1/2" />
@@ -144,7 +144,7 @@ export default function NowPlayingWidget() {
             <p className="text-sm text-(--color-text-muted)">Nothing playing right now.</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {sessions.map((s) => (
               <SessionCard key={s.session_id} s={s} />
             ))}

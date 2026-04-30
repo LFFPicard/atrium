@@ -216,7 +216,7 @@ function DowHeatmap({ data }: { data: HeatPoint[] }) {
             className="flex flex-col items-center gap-1 py-2.5 px-1 rounded-lg"
             style={{ background: heatColor(value, max) }}
           >
-            <span className="text-[10px] text-(--color-text-muted)">{label.slice(0, 3)}</span>
+            <span className="text-[10px] text-(--color-text)">{label.slice(0, 3)}</span>
             <span className="text-xs font-semibold text-(--color-text)">{value}</span>
           </div>
         ))}
@@ -237,7 +237,7 @@ function HodHeatmap({ data }: { data: HeatPoint[] }) {
             style={{ background: heatColor(value, max) }}
             title={`${label}: ${value} plays`}
           >
-            <span className="text-[9px] text-(--color-text-muted) leading-tight text-center">{label}</span>
+            <span className="text-[9px] text-(--color-text) leading-tight text-center">{label}</span>
             <span className="text-[10px] font-semibold text-(--color-text)">{value}</span>
           </div>
         ))}

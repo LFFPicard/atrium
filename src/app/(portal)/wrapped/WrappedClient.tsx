@@ -202,7 +202,7 @@ function PatternsSection({ data }: { data: WrappedSummary }) {
                   className="flex flex-col items-center gap-1 py-2 rounded-lg"
                   style={{ background: heatColor(v, dowMax) }}
                 >
-                  <span className="text-[9px] text-(--color-text-muted)">{DOW_LABELS[i]}</span>
+                  <span className="text-[9px] text-(--color-text)">{DOW_LABELS[i]}</span>
                   <span className="text-[10px] font-semibold text-(--color-text)">{v}</span>
                 </div>
               ))}
@@ -222,7 +222,7 @@ function PatternsSection({ data }: { data: WrappedSummary }) {
                   style={{ background: heatColor(v, hodMax) }}
                   title={`${hourLabel(i)}: ${v} plays`}
                 >
-                  <span className="text-[8px] text-(--color-text-muted) leading-tight">{hourLabel(i)}</span>
+                  <span className="text-[8px] text-(--color-text) leading-tight">{hourLabel(i)}</span>
                   <span className="text-[9px] font-semibold text-(--color-text)">{v}</span>
                 </div>
               ))}

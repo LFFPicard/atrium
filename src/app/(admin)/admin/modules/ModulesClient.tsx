@@ -113,17 +113,20 @@ function ModuleCard({
   const [savedConfigComplete, setSavedConfigComplete] = useState(initialConfigComplete);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<TestResult | null>(null);
+  const [testedAfterFill, setTestedAfterFill] = useState(initialConfigComplete);
   const clearTestTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const allFilled = def.configFields.length === 0 ||
     def.configFields.every((f) => !!state.config[f.key]);
 
-  const status = statusFor(state.enabled, initialConfigComplete);
+  const status = statusFor(state.enabled, savedConfigComplete);
 
-  const canTest = TESTABLE_SLUGS.has(def.slug) && savedConfigComplete;
+  const canTest = TESTABLE_SLUGS.has(def.slug) && allFilled;
 
   const setConfigField = useCallback((key: string, value: string) => {
     setState((prev) => ({ ...prev, config: { ...prev.config, [key]: value } }));
+    setTestedAfterFill(false);
+    setTestResult(null);
   }, []);
 
   const handleToggle = async (enabled: boolean) => {
@@ -167,6 +170,7 @@ function ModuleCard({
       const res = await fetch(`/api/modules/${def.slug}/test`, { method: 'POST' });
       const data = await res.json() as TestResult;
       setTestResult(data);
+      if (data.success) setTestedAfterFill(true);
     } catch {
       setTestResult({ success: false, message: 'Request failed — check the browser console' });
     } finally {
@@ -246,6 +250,13 @@ function ModuleCard({
 
               {/* Test result */}
               {testResult && <TestResultBadge result={testResult} />}
+
+              {/* Untested warning */}
+              {canTest && allFilled && !testedAfterFill && !testResult && (
+                <p className="text-xs text-amber-400">
+                  Connection untested — consider testing before saving.
+                </p>
+              )}
 
               {/* Actions row */}
               <div className="flex items-center justify-between gap-2 pt-1">

@@ -1,7 +1,7 @@
 import { getAllModules } from '@/lib/modules';
 import { getAllTabs } from '@/lib/tabs';
 
-export type WidgetId = 'now-playing' | 'recently-added' | 'stats' | 'wrapped' | 'uptime' | 'quick-links' | 'donation' | 'calendar' | 'overseerr';
+export type WidgetId = 'now-playing' | 'recently-added' | 'stats' | 'wrapped' | 'uptime' | 'quick-links' | 'calendar' | 'overseerr';
 
 export function getDashboardWidgets(userRole: string): WidgetId[] {
   const modules = getAllModules();
@@ -18,6 +18,5 @@ export function getDashboardWidgets(userRole: string): WidgetId[] {
   if (enabled.has('sonarr') || enabled.has('radarr')) widgets.push('calendar');
   if (enabled.has('uptime')) widgets.push('uptime');
   if (hasTabs) widgets.push('quick-links');
-  if (enabled.has('donations')) widgets.push('donation');
   return widgets;
 }

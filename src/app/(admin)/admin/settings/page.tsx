@@ -13,6 +13,7 @@ export default function AdminSettingsPage() {
     'donation_provider',
     'donation_url',
     'donation_label',
+    'donation_placement',
     'site_name',
     'admin_email',
   ]);
@@ -27,6 +28,7 @@ export default function AdminSettingsPage() {
     donation_provider: (raw.donation_provider as string) ?? '',
     donation_url: (raw.donation_url as string) ?? '',
     donation_label: (raw.donation_label as string) ?? '',
+    donation_placement: (raw.donation_placement as string) ?? 'sidebar',
     site_name: (raw.site_name as string) ?? 'Atrium',
     admin_email: (raw.admin_email as string) ?? '',
   };

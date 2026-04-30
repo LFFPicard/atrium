@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { signOut } from 'next-auth/react';
+import DonationWidget from '@/components/modules/DonationWidget';
 import type { TabRow } from '@/lib/tabs';
 
 interface SidebarProps {
@@ -12,6 +13,7 @@ interface SidebarProps {
   onMobileClose: () => void;
   enabledModuleSlugs: string[];
   tabs: TabRow[];
+  donation: { url: string; label: string } | null;
 }
 
 const navItems = [
@@ -169,7 +171,7 @@ function TabIcon({ icon, collapsed }: { icon: string; collapsed: boolean }) {
   );
 }
 
-export default function Sidebar({ user, mobileOpen, onMobileClose, enabledModuleSlugs, tabs }: SidebarProps) {
+export default function Sidebar({ user, mobileOpen, onMobileClose, enabledModuleSlugs, tabs, donation }: SidebarProps) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [unread, setUnread] = useState(0);
@@ -325,6 +327,13 @@ export default function Sidebar({ user, mobileOpen, onMobileClose, enabledModule
           </>
         )}
       </nav>
+
+      {/* Donation — sidebar placement */}
+      {donation && !collapsed && (
+        <div className="shrink-0 px-2 pb-1">
+          <DonationWidget url={donation.url} label={donation.label} compact />
+        </div>
+      )}
 
       {/* User section */}
       <div className="shrink-0 border-t border-(--color-border) p-2">

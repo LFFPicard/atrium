@@ -62,26 +62,19 @@ export default function UptimeWidget({ isAdmin = false }: { isAdmin?: boolean })
       <div className="px-4 py-3 border-b border-(--color-border)">
         <p className="text-sm font-semibold text-(--color-text)">Service Status</p>
       </div>
-      <div className="divide-y divide-(--color-border)">
+      <div className="px-4 py-3 flex flex-wrap gap-2">
         {visible.map((check) => {
           const { uptimePct, lastResponseMs } = getStats(check.id);
           const status = check.lastStatus as UptimeStatus;
           const cfg = STATUS_CONFIG[status];
           return (
-            <div key={check.id} className="flex items-center gap-3 px-4 py-3">
+            <div
+              key={check.id}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-(--color-border) bg-(--color-bg)"
+              title={`${uptimePct}% uptime${lastResponseMs != null ? ` · ${lastResponseMs}ms` : ''} · ${timeAgo(check.lastCheckedAt)}`}
+            >
               <span className={`w-2 h-2 rounded-full shrink-0 ${cfg.dot}`} />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-(--color-text) truncate">{check.serviceName}</p>
-                <p className="text-xs text-(--color-text-muted)">{timeAgo(check.lastCheckedAt)}</p>
-              </div>
-              <div className="text-right shrink-0">
-                <p className={`text-xs font-medium ${uptimePct >= 99 ? 'text-emerald-400' : uptimePct >= 95 ? 'text-amber-400' : 'text-red-400'}`}>
-                  {uptimePct}%
-                </p>
-                {lastResponseMs != null && (
-                  <p className="text-xs text-(--color-text-muted)">{lastResponseMs}ms</p>
-                )}
-              </div>
+              <span className="text-xs font-medium text-(--color-text) whitespace-nowrap">{check.serviceName}</span>
             </div>
           );
         })}

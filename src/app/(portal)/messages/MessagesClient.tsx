@@ -188,7 +188,7 @@ function ComposeModal({
             />
           </div>
 
-          {error && <p className="text-xs text-red-500 ml-[68px]">{error}</p>}
+          {error && <p className="text-xs text-red-500 ml-17">{error}</p>}
         </div>
 
         {/* Footer */}
@@ -445,7 +445,7 @@ export default function MessagesClient({ userId, userRole, allUsers }: Props) {
         />
       )}
 
-      <div className="bg-(--color-surface) border border-(--color-border) rounded-xl overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 160px)', minHeight: 500 }}>
+      <div className="bg-(--color-surface) border-x border-(--color-border) overflow-hidden flex flex-col h-full">
         {/* Top bar */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-(--color-border) shrink-0">
           <div className="flex items-center gap-2">

@@ -65,8 +65,11 @@ export default async function DashboardPage() {
     (t) => t.enabled && (isAdmin || t.minRole === 'user'),
   );
 
+  const donationEnabled = getSetting<boolean>('donation_enabled') ?? false;
+  const donationPlacement = getSetting<string>('donation_placement') ?? 'sidebar';
   const donationUrl = getSetting<string>('donation_url') ?? '';
   const donationLabel = getSetting<string>('donation_label') ?? 'Support this server';
+  const showDonationWidget = donationEnabled && !!donationUrl && donationPlacement === 'dashboard';
 
   return (
     <div>
@@ -123,10 +126,10 @@ export default async function DashboardPage() {
             </div>
           )}
 
-          {/* Donation — single column */}
-          <ModuleGate slug="donations">
+          {/* Donation — dashboard placement only */}
+          {showDonationWidget && (
             <DonationWidget url={donationUrl} label={donationLabel} />
-          </ModuleGate>
+          )}
         </div>
       )}
     </div>

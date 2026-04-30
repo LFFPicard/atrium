@@ -60,11 +60,11 @@ export const MODULE_DEFINITIONS: ModuleDefinition[] = [
   },
   {
     slug: 'overseerr',
-    name: 'Overseerr',
-    description: 'Media request management for Plex.',
+    name: 'Seerr',
+    description: 'Media request management — supports Jellyseerr and Overseerr.',
     configFields: [
-      { key: 'overseerr_url', label: 'Overseerr URL', type: 'url', placeholder: 'http://192.168.1.x:5055' },
-      { key: 'overseerr_api_key', label: 'API Key', type: 'password', placeholder: 'Your Overseerr API key' },
+      { key: 'overseerr_url', label: 'Seerr URL', type: 'url', placeholder: 'http://192.168.1.x:5055' },
+      { key: 'overseerr_api_key', label: 'API Key', type: 'password', placeholder: 'Your Seerr API key' },
     ],
     unlocks: ['Request inbox widget'],
   },
@@ -165,5 +165,5 @@ export function isModuleConfigured(slug: string): boolean {
   const def = MODULE_DEFINITIONS.find((d) => d.slug === slug);
   if (!def || def.configFields.length === 0) return true;
   const record = ensureModule(slug);
-  return def.configFields.every((f) => !!record.config[f.key]);
+  return def.configFields.every((f) => !!record.config[f.key]?.trim());
 }

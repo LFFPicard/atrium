@@ -91,7 +91,7 @@ function base(url: string) {
 async function tGet<T>(tUrl: string, key: string, params: Record<string, string>): Promise<T | null> {
   try {
     const p = new URLSearchParams({ apikey: key, ...params });
-    const res = await fetch(`${base(tUrl)}/api?${p}`, { signal: AbortSignal.timeout(30_000) });
+    const res = await fetch(`${base(tUrl)}/api/v2?${p}`, { signal: AbortSignal.timeout(30_000) });
     if (!res.ok) return null;
     return (await res.json()) as T;
   } catch {
