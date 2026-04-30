@@ -230,6 +230,33 @@ atrium/
 | read | boolean | |
 | created_at | integer | |
 
+### `uptime_checks`
+| Column | Type | Notes |
+|---|---|---|
+| id | text (uuid) | PK |
+| service_name | text | Display name |
+| service_type | text | `module` \| `custom` |
+| module_slug | text | Nullable — links to a module |
+| url | text | Endpoint to ping |
+| enabled | boolean | |
+| interval_minutes | integer | Default 15 |
+| consecutive_failures | integer | Default 0 |
+| last_status | text | `up` \| `degraded` \| `down` \| `unknown` |
+| last_checked_at | integer | Unix timestamp |
+| last_notified_at | integer | Unix timestamp — prevents notification spam |
+| notify_email | boolean | |
+| notify_webhook | boolean | |
+| public | boolean | Show to regular users on dashboard widget |
+
+### `uptime_events`
+| Column | Type | Notes |
+|---|---|---|
+| id | text (uuid) | PK |
+| check_id | text | FK → uptime_checks |
+| status | text | `up` \| `down` \| `degraded` |
+| response_ms | integer | Response time in milliseconds |
+| checked_at | integer | Unix timestamp |
+
 ### `stats_cache`
 | Column | Type | Notes |
 |---|---|---|
@@ -253,7 +280,7 @@ Each module has a slug, a list of required settings keys, and a list of features
 | `smtp` | `smtp_host`, `smtp_port`, `smtp_user`, `smtp_pass`, `smtp_from` | Email notifications |
 | `webhooks` | _(none — generates a secret key)_ | Webhook receiver, push notifications to subscribers |
 | `donations` | `donation_provider`, `donation_url`, `donation_label` | Donation button in UI |
-| `demo` | _(none)_ | Demo mode — populates dashboard with dummy data |
+| `uptime` | _(none — uses existing module configs)_ | Uptime monitor, status widget, down alerts |
 
 `ModuleGate` component checks module enabled status before rendering any module UI. Disabled modules are invisible — no placeholders, no errors.
 
@@ -298,6 +325,11 @@ location = /auth {
 ## iFrame & Reverse Proxy Notes
 
 Services behind a reverse proxy will send `X-Frame-Options: SAMEORIGIN` by default. Users must strip this header in their nginx proxy config for each service they want to iFrame:
+
+```nginx
+proxy_hide_header X-Frame-Options;
+proxy_hide_header Content-Security-Policy;
+```
 
 This is a **documented setup requirement**, not something Atrium handles. Atrium's docs will include per-service nginx snippets for common apps (Sonarr, Radarr, Overseerr, Immich etc.).
 
@@ -365,7 +397,7 @@ All other configuration (API keys, SMTP, branding) is stored in the `settings` t
 - Per-user show/movie subscriptions (filter calendar to your content)
 - Internal messaging (user → admin)
 - Demo mode (dummy data for unauthenticated preview)
-- Donation button (Ko-fi, PayPal, Buy Me a Coffee, Liberapay)
+- Uptime monitor (background poller, admin dashboard, public status widget, email/webhook alerts)
 
 ### Phase 2 — Personalisation (v1.5)
 - Email notifications via SMTP (new episode of subscribed show etc.)
@@ -381,6 +413,148 @@ All other configuration (API keys, SMTP, branding) is stored in the `settings` t
 - Multi-server support (multiple Plex/Jellyfin/Sonarr instances)
 - Push notifications (web push)
 - Emby support
+
+---
+
+## Uptime Monitor
+
+Atrium includes a built-in uptime monitor that pings configured services on a schedule and alerts the admin when something goes down.
+
+### How It Works
+
+A singleton background poller starts when the Next.js server boots (`src/lib/uptime/poller.ts`). It uses `setInterval` — no external scheduler or extra containers required. On each tick it fetches all enabled `uptime_checks` from the DB, filters to those due for a check based on `last_checked_at` and `interval_minutes`, and pings each one.
+
+Pinging reuses `testModuleConnection` from `src/lib/module-tests.ts` for module-type checks. Custom URL checks are a simple `fetch` with a 10 second timeout.
+
+### Alert Logic
+
+- **1 failure** → status set to `degraded`
+- **3 consecutive failures** → status set to `down`, notification sent
+- **Recovery** → status set to `up`, recovery notification sent
+- `last_notified_at` prevents repeat notifications — only notifies once per down event and once on recovery
+- Notification channels: SMTP email (requires smtp module) and optional webhook URL (Discord/Slack compatible)
+
+### What Gets Monitored
+
+Two types of checks:
+
+- **Module services** — auto-created when a module is enabled and configured. Uses the module's saved URL and API key via `testModuleConnection`
+- **Custom endpoints** — admin adds arbitrary URLs to monitor (NAS, router, any HTTP endpoint)
+
+### Admin Configuration
+
+`src/app/(admin)/admin/uptime/page.tsx` — lists all checks with current status, response time, uptime % over 30 days, and last checked time. Admin can add/edit/delete custom checks, configure interval, toggle notifications, and mark services as public-facing.
+
+### User-Facing Widget
+
+`src/components/modules/UptimeWidget.tsx` — dashboard widget showing public-facing services only. Displays:
+- Service name + icon
+- Status dot (green = up, amber = degraded, red = down)
+- Response time in ms
+- Uptime % over last 30 days
+- "Last checked X minutes ago"
+
+Admin sees all services. Regular users see only checks where `public = true`.
+
+### Poller Singleton
+
+`src/lib/uptime/poller.ts` — exported `startPoller()` called once from a Next.js instrumentation file (`instrumentation.ts` in project root). Instrumentation hooks run once on server start in both dev and production, making them the correct place for background processes in Next.js App Router.
+
+```ts
+// instrumentation.ts
+export async function register() {
+  if (process.env.NEXT_RUNTIME === 'nodejs') {
+    const { startPoller } = await import('./src/lib/uptime/poller')
+    startPoller()
+  }
+}
+```
+
+### Files
+
+| File | Purpose |
+|---|---|
+| `src/lib/uptime/poller.ts` | Singleton interval, tick logic, calls checker and notifier |
+| `src/lib/uptime/checker.ts` | Pings a single check, records result to `uptime_events`, updates `uptime_checks` |
+| `src/lib/uptime/notifier.ts` | Sends email/webhook alerts on status change |
+| `src/app/(admin)/admin/uptime/page.tsx` | Admin uptime dashboard |
+| `src/app/api/uptime/route.ts` | GET all checks, POST create custom check |
+| `src/app/api/uptime/[id]/route.ts` | PATCH update, DELETE remove check |
+| `src/components/modules/UptimeWidget.tsx` | User-facing status board widget |
+
+---
+
+## Theming System
+
+Atrium has a three-layer theming system. All colours in the app reference CSS custom properties — never hardcoded Tailwind colours. This means themes are applied by swapping a single set of variables at the root level.
+
+### CSS Custom Properties
+
+Defined in `src/app/globals.css` and injected into `:root`. Every component uses these variables via Tailwind's `arbitrary value` syntax e.g. `bg-[var(--color-sidebar)]`.
+
+```css
+:root {
+  --color-bg:           /* page background */
+  --color-surface:      /* card / panel background */
+  --color-sidebar:      /* sidebar background */
+  --color-navbar:       /* top bar background */
+  --color-accent:       /* primary accent (buttons, highlights, active states) */
+  --color-accent-text:  /* text on accent colour */
+  --color-sidebar-text: /* sidebar text */
+  --color-navbar-text:  /* navbar text */
+  --color-button:       /* button background */
+  --color-button-text:  /* button text */
+  --color-border:       /* subtle borders */
+  --color-text:         /* primary body text */
+  --color-text-muted:   /* secondary/muted text */
+}
+```
+
+### Layer 1 — Preset Themes
+
+Stored as named JSON objects in `src/lib/themes.ts`. Applied in one click from the Appearance settings page.
+
+| Theme | Description |
+|---|---|
+| `atrium-dark` | Default — deep slate, teal accent |
+| `plex` | Dark charcoal, orange accent |
+| `jellyfin` | Dark navy, purple accent |
+| `nord` | Muted blues and greys — popular homelab aesthetic |
+| `amoled` | Pure black — OLED screens |
+| `light` | Light mode |
+
+### Layer 2 — Per-Element Overrides
+
+Admin can override any individual CSS variable after applying a preset. Changes are stored in the `settings` table under key `theme_overrides` as a JSON object. Applied on top of the active preset at runtime.
+
+Configurable per-element values in the Appearance settings panel:
+- Navbar colour + text colour
+- Sidebar colour + text colour
+- Accent colour + accent text colour
+- Button colour + button text colour
+- Background colour
+- Surface/card colour
+
+### Layer 3 — Login Page Customisation
+
+Separate from the main theme. Stored under `settings` key `login_appearance`:
+- Background image (uploaded to `data/uploads/` — path stored in settings)
+- Site logo (uploaded to `data/uploads/` — replaces "Atrium" wordmark)
+- Site name text
+- Login card background opacity (0–100%)
+
+### Theme Application
+
+`src/app/layout.tsx` fetches the active theme preset and overrides from the `settings` table server-side on each request, and injects them as a `<style>` tag into `:root`. No client-side flash, no localStorage dependency.
+
+The Appearance settings page updates CSS variables in real-time via React state for live preview before saving to the database.
+
+### Notes for Claude on Theming
+
+- Never use hardcoded Tailwind colour classes (e.g. `bg-slate-900`) in layout or module components — always use `bg-[var(--color-bg)]` etc.
+- Tailwind utility classes for sizing, spacing, typography, and layout are fine
+- New components must use the CSS variable system — check existing components for reference
+- The login page has its own separate variable set (`--login-bg-image`, `--login-card-opacity` etc.) and should not share variables with the main layout
 
 ---
 
@@ -414,4 +588,7 @@ All other configuration (API keys, SMTP, branding) is stored in the `settings` t
 - The `data/` directory is the only persistent volume — keep all runtime state inside it
 - When adding a new module, always add: slug to module list, settings keys to settings schema, a `ModuleGate` wrapper on any UI, and a section in the docs
 - nginx config snippets for new service iFrame setups should be added to `docs/nginx-snippets.md`
+- The uptime poller starts via `instrumentation.ts` — never start it anywhere else or it will run multiple instances
+- Uptime checks of type `module` should be auto-created/removed when a module is enabled/disabled — keep them in sync
+- Never expose API keys or internal URLs in the public-facing uptime widget — show service name and status only
 - Check `modules` table before any module API call — if module is disabled, return early with null rather than erroring

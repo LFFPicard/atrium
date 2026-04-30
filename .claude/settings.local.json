@@ -10,7 +10,12 @@
       "Bash(mv .claude ../.claude.bak)",
       "Bash(mv ../CLAUDE.md.bak CLAUDE.md)",
       "Bash(mv ../.claude.bak .claude)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "Bash(npx tsc *)",
+      "Bash(node -e \"const p = require\\('./node_modules/next-auth/package.json'\\); const e = p.exports; console.log\\(JSON.stringify\\(Object.keys\\(e\\).filter\\(k => k.includes\\('jwt'\\)\\), null, 2\\)\\)\")",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({**d.get\\('dependencies',{}\\), **d.get\\('devDependencies',{}\\)}, indent=2\\)\\)\")",
+      "Bash(node -e \"require\\('recharts'\\)\")"
     ]
   }
 }

@@ -1,3 +1,7 @@
+import { getAllTabs } from '@/lib/tabs';
+import TabsClient from './TabsClient';
+
 export default function AdminTabsPage() {
-  return <div>Tab Manager</div>;
+  const tabs = getAllTabs();
+  return <TabsClient initialTabs={tabs} />;
 }
