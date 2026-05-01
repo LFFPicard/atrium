@@ -33,8 +33,8 @@ export async function GET(req: NextRequest) {
 
   try {
     if (endpoint === 'image') {
-      const imgPath = searchParams.get('url');
-      if (!imgPath) return NextResponse.json({ error: 'Missing url' }, { status: 400 });
+      const imgPath = searchParams.get('path');
+      if (!imgPath) return NextResponse.json({ error: 'Missing path' }, { status: 400 });
       const res = await fetch(`${radarrBase}${imgPath}?apikey=${key}`, {
         signal: AbortSignal.timeout(8000),
       });

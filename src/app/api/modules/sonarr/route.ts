@@ -33,8 +33,8 @@ export async function GET(req: NextRequest) {
 
   try {
     if (endpoint === 'image') {
-      const imgPath = searchParams.get('url');
-      if (!imgPath) return NextResponse.json({ error: 'Missing url' }, { status: 400 });
+      const imgPath = searchParams.get('path');
+      if (!imgPath) return NextResponse.json({ error: 'Missing path' }, { status: 400 });
       const res = await fetch(`${sonarrBase}${imgPath}?apikey=${key}`, {
         signal: AbortSignal.timeout(8000),
       });
@@ -54,6 +54,7 @@ export async function GET(req: NextRequest) {
       const end = searchParams.get('end');
       if (start) params.set('start', start);
       if (end) params.set('end', end);
+      params.set('includeSeries', 'true');
     }
 
     const res = await fetch(`${sonarrBase}/api/v3/${endpoint}?${params}`, {

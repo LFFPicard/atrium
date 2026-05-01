@@ -9,9 +9,11 @@ interface SonarrEpisode {
   seasonNumber: number;
   title: string;
   airDate: string;
-  series: {
+  airDateUtc?: string;
+  series?: {
     id: number;
     title: string;
+    remotePoster?: string;
     images: Array<{ coverType: string; url: string; remoteUrl?: string }>;
   };
 }
@@ -19,6 +21,7 @@ interface SonarrEpisode {
 interface RadarrMovie {
   id: number;
   title: string;
+  remotePoster?: string;
   inCinemas?: string;
   digitalRelease?: string;
   physicalRelease?: string;
@@ -72,11 +75,23 @@ function formatDayHeader(dateStr: string): { weekday: string; dayMonth: string }
   };
 }
 
-function posterFor(images: Array<{ coverType: string; url: string; remoteUrl?: string }>, proxyBase: string): string | undefined {
+// Convert a UTC ISO timestamp to a local YYYY-MM-DD date string so episodes
+// land on the correct day column in the user's timezone.
+function utcToLocalDateStr(utc: string): string {
+  const d = new Date(utc);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function posterFor(
+  remotePoster: string | undefined,
+  images: Array<{ coverType: string; url: string; remoteUrl?: string }>,
+  proxyBase: string,
+): string | undefined {
+  if (remotePoster) return remotePoster;
   const img = images.find((i) => i.coverType === 'poster');
   if (!img) return undefined;
   if (img.remoteUrl) return img.remoteUrl;
-  return `${proxyBase}?endpoint=image&url=${encodeURIComponent(img.url)}`;
+  return `${proxyBase}?endpoint=image&path=${encodeURIComponent(img.url)}`;
 }
 
 function FilmIcon() {
@@ -98,7 +113,9 @@ function HeartIcon({ filled }: { filled: boolean }) {
 
 export default function CalendarClient({ initialSubscriptions, sonarrEnabled, radarrEnabled }: Props) {
   const today = todayStr();
-  const days = buildDayRange(today, 30);
+  // 14 days of past context + today + 29 days forward = 44 days total
+  const rangeStart = addDays(today, -14);
+  const days = buildDayRange(rangeStart, 44);
 
   const [filter, setFilter] = useState<'all' | 'mine'>('all');
   const [subscribedKeys, setSubscribedKeys] = useState<Set<string>>(() => {
@@ -113,11 +130,21 @@ export default function CalendarClient({ initialSubscriptions, sonarrEnabled, ra
   const [loading, setLoading] = useState(true);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const todayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     void loadCalendar();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // After data loads, scroll so today's column sits at ~1/4 from the left,
+  // giving visible context of past episodes on the left side.
+  useEffect(() => {
+    if (loading || !todayRef.current || !scrollRef.current) return;
+    const container = scrollRef.current;
+    const el = todayRef.current;
+    container.scrollLeft = Math.max(0, el.offsetLeft - container.clientWidth / 4);
+  }, [loading]);
 
   async function loadCalendar() {
     const start = days[0];
@@ -130,15 +157,17 @@ export default function CalendarClient({ initialSubscriptions, sonarrEnabled, ra
         if (res.ok) {
           const eps = (await res.json()) as SonarrEpisode[];
           for (const ep of eps) {
-            if (!ep.airDate) continue;
+            // Prefer airDateUtc (accurate UTC time → local date) over the bare airDate string
+            const date = ep.airDateUtc ? utcToLocalDateStr(ep.airDateUtc) : ep.airDate;
+            if (!date || !ep.series) continue;
             all.push({
               key: `sonarr-ep-${ep.id}`,
               type: 'show',
               mediaId: ep.seriesId,
-              date: ep.airDate,
+              date,
               title: ep.series.title,
               subtitle: `S${String(ep.seasonNumber).padStart(2, '0')}E${String(ep.episodeNumber).padStart(2, '0')}`,
-              posterUrl: posterFor(ep.series.images, '/api/modules/sonarr'),
+              posterUrl: posterFor(ep.series.remotePoster, ep.series.images, '/api/modules/sonarr'),
             });
           }
         }
@@ -159,7 +188,7 @@ export default function CalendarClient({ initialSubscriptions, sonarrEnabled, ra
               mediaId: m.id,
               date,
               title: m.title,
-              posterUrl: posterFor(m.images, '/api/modules/radarr'),
+              posterUrl: posterFor(m.remotePoster, m.images, '/api/modules/radarr'),
             });
           }
         }
@@ -244,7 +273,7 @@ export default function CalendarClient({ initialSubscriptions, sonarrEnabled, ra
           <p className="text-sm font-semibold text-(--color-text)">Upcoming</p>
           {!loading && (
             <span className="text-xs text-(--color-text-muted)">
-              {totalItems === 0 ? 'nothing in the next 30 days' : `${totalItems} item${totalItems !== 1 ? 's' : ''}`}
+              {totalItems === 0 ? 'nothing in this period' : `${totalItems} item${totalItems !== 1 ? 's' : ''}`}
             </span>
           )}
         </div>
@@ -289,9 +318,8 @@ export default function CalendarClient({ initialSubscriptions, sonarrEnabled, ra
             const { weekday, dayMonth } = formatDayHeader(day);
 
             if (dayItems.length === 0) {
-
               return (
-                <div key={day} className="w-7 shrink-0 flex flex-col items-center">
+                <div key={day} ref={isToday ? todayRef : undefined} className="w-7 shrink-0 flex flex-col items-center">
                   <div className={`w-full rounded py-1 text-center ${isToday ? 'bg-(--color-accent)' : ''}`}>
                     <span
                       className={`text-[10px] font-medium block [writing-mode:vertical-rl] rotate-180 mx-auto leading-none ${isToday ? 'text-(--color-accent-text)' : 'text-(--color-text-muted)'}`}
@@ -305,7 +333,7 @@ export default function CalendarClient({ initialSubscriptions, sonarrEnabled, ra
             }
 
             return (
-              <div key={day} className="w-32.5 shrink-0">
+              <div key={day} ref={isToday ? todayRef : undefined} className="w-32.5 shrink-0">
                 <div className={`rounded-t-lg px-2 py-1.5 mb-1.5 text-center ${isToday ? 'bg-(--color-accent)' : 'bg-(--color-bg)'}`}>
                   <p className={`text-[10px] font-medium ${isToday ? 'text-(--color-accent-text)' : 'text-(--color-text-muted)'}`}>
                     {weekday}
@@ -358,7 +386,7 @@ export default function CalendarClient({ initialSubscriptions, sonarrEnabled, ra
           {totalItems === 0 && !loading && (
             <div className="flex-1 flex flex-col items-center justify-center py-12 text-center px-4">
               <p className="text-sm font-medium text-(--color-text) mb-1">
-                {filter === 'mine' ? 'No subscribed titles this month' : 'Nothing scheduled in the next 30 days'}
+                {filter === 'mine' ? 'No subscribed titles in this period' : 'Nothing scheduled in the past 14 or next 30 days'}
               </p>
               {filter === 'mine' && (
                 <p className="text-xs text-(--color-text-muted)">
