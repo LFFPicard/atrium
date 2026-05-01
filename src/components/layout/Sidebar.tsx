@@ -209,15 +209,17 @@ export default function Sidebar({ user, mobileOpen, onMobileClose, enabledModule
 
   const sidebarContent = (
     <div className="flex flex-col h-full">
-      {/* Header */}
       <div className="flex items-center justify-between px-3 h-14 shrink-0 border-b border-(--color-border)">
-        {!collapsed && (
-          <span className="text-(--color-text) font-semibold tracking-tight text-base">Atrium</span>
-        )}
-        <button
-          onClick={() => setCollapsed((c) => !c)}
-          className="hidden lg:flex items-center justify-center w-7 h-7 rounded-md text-(--color-text-muted) hover:text-(--color-text) hover:bg-(--color-surface) transition-colors ml-auto"
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+  {!collapsed && (
+    <img src="/wordmark.svg" alt="Atrium" className="h-7" style={{ color: 'var(--color-accent)' }} />
+  )}
+  {collapsed && (
+    <img src="/logo-mark.svg" alt="Atrium" className="h-7 w-7" style={{ color: 'var(--color-accent)' }} />
+  )}
+  <button
+    onClick={() => setCollapsed((c) => !c)}
+    className="hidden lg:flex items-center justify-center w-7 h-7 rounded-md text-(--color-text-muted) hover:text-(--color-text) hover:bg-(--color-surface) transition-colors ml-auto"
+    aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
             {collapsed

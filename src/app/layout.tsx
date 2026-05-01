@@ -17,6 +17,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'Atrium',
   description: 'Your self-hosted homelab portal',
+  icons: {
+  icon: '/favicon.svg',
+  apple: '/icon.svg',
+},
 };
 
 export default function RootLayout({
