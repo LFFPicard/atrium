@@ -30,6 +30,7 @@ interface HomeStatItem {
   duration?: number;
   friendly_name?: string;
   grandparent_title?: string;
+  grandparent_thumb?: string;
   platform?: string;
   rating_key?: string;
   thumb?: string;
@@ -46,6 +47,10 @@ interface HomeStatsResponse {
 interface HeatPoint { label: string; value: number; }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+function tautulliImage(path: string): string {
+  return `/api/modules/tautulli?cmd=get_image&img=${encodeURIComponent(path)}`;
+}
 
 function formatDuration(seconds: number): string {
   if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
@@ -171,10 +176,10 @@ function TopList({
                 ? (item.friendly_name ?? 'Unknown')
                 : (item.title ?? item.grandparent_title ?? 'Unknown');
             const plays = item.total_plays ?? item.count ?? 0;
-            const thumbSrc =
-              type !== 'user' && item.thumb
-                ? `/api/modules/tautulli?cmd=get_image&img=${encodeURIComponent(item.thumb)}`
-                : undefined;
+            // For TV shows Tautulli may return episode-level rows where grandparent_thumb
+            // is the show poster; fall back to thumb (correct for movies and show-level rows).
+            const posterPath = item.grandparent_thumb ?? item.thumb;
+            const thumbSrc = type !== 'user' && posterPath ? tautulliImage(posterPath) : undefined;
             return (
               <li key={i} className="flex items-center gap-2.5">
                 <span className="text-xs font-semibold text-(--color-text-muted) w-4 text-right shrink-0">
@@ -333,7 +338,7 @@ export default function StatsClient({ isAdmin, tautulliUserId }: Props) {
             <div key={i} className="bg-(--color-surface) border border-(--color-border) rounded-xl h-20" />
           ))}
         </div>
-        <div className="bg-(--color-surface) border border-(--color-border) rounded-xl h-[280px]" />
+        <div className="bg-(--color-surface) border border-(--color-border) rounded-xl h-70" />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-(--color-surface) border border-(--color-border) rounded-xl h-32" />
           <div className="bg-(--color-surface) border border-(--color-border) rounded-xl h-32" />

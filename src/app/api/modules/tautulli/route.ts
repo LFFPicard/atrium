@@ -63,7 +63,10 @@ export async function GET(req: NextRequest) {
       if (w) params.set('width', w);
       if (h) params.set('height', h);
 
-      const res = await fetch(`${tautulliBase}/pms_image_proxy?${params}`, {
+      const fetchUrl = `${tautulliBase}/pms_image_proxy?${params}`;
+      console.log('[atrium/tautulli] get_image fetching:', fetchUrl.replace(key, '***'));
+
+      const res = await fetch(fetchUrl, {
         signal: AbortSignal.timeout(8000),
       });
       if (!res.ok) return new NextResponse(null, { status: res.status });

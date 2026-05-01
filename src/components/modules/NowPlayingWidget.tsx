@@ -34,8 +34,10 @@ interface ActivityResponse {
   error?: string;
 }
 
-function imgUrl(thumb: string, w: number, h: number) {
-  return `/api/modules/tautulli?cmd=get_image&img=${encodeURIComponent(thumb)}&width=${w}&height=${h}`;
+function tautulliImage(path: string, width?: number, height?: number): string {
+  const base = `/api/modules/tautulli?cmd=get_image&img=${encodeURIComponent(path)}`;
+  if (width && height) return `${base}&width=${width}&height=${height}`;
+  return base;
 }
 
 function transcodeLabel(decision: string): string {
@@ -62,7 +64,7 @@ function SessionCard({ s }: { s: TautulliSession }) {
       <div className="relative shrink-0 w-10 h-15 rounded overflow-hidden bg-(--color-border)">
         {thumb && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={imgUrl(thumb, 64, 96)} alt="" className="w-full h-full object-cover" />
+          <img src={tautulliImage(thumb, 64, 96)} alt="" className="w-full h-full object-cover" />
         )}
       </div>
       <div className="flex-1 min-w-0">

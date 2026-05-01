@@ -28,16 +28,23 @@ function timeAgo(ts: number): string {
   return `${Math.floor(secs / 86400)}d ago`;
 }
 
+function tautulliImage(path: string, width?: number, height?: number): string {
+  const base = `/api/modules/tautulli?cmd=get_image&img=${encodeURIComponent(path)}`;
+  if (width && height) return `${base}&width=${width}&height=${height}`;
+  return base;
+}
+
 function PosterCard({ item }: { item: RecentItem }) {
   const [err, setErr] = useState(false);
   const isTV = item.media_type === 'episode';
   const label = isTV ? item.grandparent_title : item.title;
+  // TV episodes: grandparent_thumb is the show poster; movies: thumb is the movie poster
   const thumb = isTV ? item.grandparent_thumb : item.thumb;
-  const src = `/api/modules/tautulli?cmd=get_image&img=${encodeURIComponent(thumb)}&width=150&height=225`;
+  const src = tautulliImage(thumb, 150, 225);
 
   return (
     <div className="group">
-      <div className="aspect-[2/3] bg-(--color-bg) rounded-lg overflow-hidden border border-(--color-border)">
+      <div className="aspect-2/3 bg-(--color-bg) rounded-lg overflow-hidden border border-(--color-border)">
         {thumb && !err ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -94,7 +101,7 @@ export default function RecentlyAddedWidget() {
         {loading ? (
           <div className="grid grid-cols-5 gap-3">
             {Array.from({ length: 10 }).map((_, i) => (
-              <div key={i} className="aspect-[2/3] bg-(--color-bg) rounded-lg animate-pulse border border-(--color-border)" />
+              <div key={i} className="aspect-2/3 bg-(--color-bg) rounded-lg animate-pulse border border-(--color-border)" />
             ))}
           </div>
         ) : items.length === 0 ? (
