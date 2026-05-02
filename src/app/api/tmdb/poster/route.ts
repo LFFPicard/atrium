@@ -19,14 +19,20 @@ export async function GET(req: NextRequest) {
 
   const posterPath = await getTmdbPosterPath(id, rawType);
   if (!posterPath) {
-    // No TMDB API key configured, ID not found, or fetch failed — caller falls back to Tautulli proxy
     return new NextResponse(null, { status: 404 });
   }
 
-  // TMDB image CDN is public — redirect the browser directly to it.
-  // Cache-Control on the redirect so browsers don't re-hit this route on every page load.
-  return NextResponse.redirect(`https://image.tmdb.org/t/p/${size}${posterPath}`, {
-    status: 302,
-    headers: { 'Cache-Control': 'public, max-age=86400' },
+  const tmdbUrl = `https://image.tmdb.org/t/p/${size}${posterPath}`;
+  console.log('[atrium/tmdb/poster] fetching:', tmdbUrl);
+
+  const imageRes = await fetch(tmdbUrl, { signal: AbortSignal.timeout(8_000) });
+  if (!imageRes.ok) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+  const buffer = await imageRes.arrayBuffer();
+  return new NextResponse(buffer, {
+    headers: {
+      'Content-Type': imageRes.headers.get('content-type') ?? 'image/jpeg',
+      'Cache-Control': 'public, max-age=604800',
+    },
   });
 }
