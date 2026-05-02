@@ -151,7 +151,18 @@ export default function NowPlayingWidget() {
     fetch('/api/modules/tautulli?cmd=get_activity')
       .then((r) => r.json())
       .then((d: ActivityResponse) => {
-        setSessions(d?.response?.data?.sessions ?? []);
+        const sessions = d?.response?.data?.sessions ?? [];
+        if (sessions.length > 0) {
+          const s = sessions[0];
+          console.log('[atrium/NowPlayingWidget] first session TMDB fields:', {
+            media_type: s.media_type,
+            tmdb_id: s.tmdb_id,
+            guid: s.guid,
+            grandparent_guid: s.grandparent_guid,
+          });
+          console.log('[atrium/NowPlayingWidget] full first session:', s);
+        }
+        setSessions(sessions);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
