@@ -13,10 +13,8 @@ interface TautulliSession {
   media_type: string;
   thumb: string;
   grandparent_thumb: string;
-  // TMDB IDs — present in newer Tautulli versions
-  tmdb_id?: number | null;
-  guid?: string;               // e.g. "tmdb://12345" for movies
-  grandparent_guid?: string;   // e.g. "tmdb://67890" for TV shows
+  rating_key: string;
+  grandparent_rating_key: string;
   progress_percent: string;
   duration: number;
   view_offset: number;
@@ -38,13 +36,6 @@ interface ActivityResponse {
   error?: string;
 }
 
-// Extract a numeric TMDB ID from a Tautulli guid string like "tmdb://12345"
-function parseTmdbId(guid?: string): string | null {
-  if (!guid) return null;
-  const m = guid.match(/^tmdb:\/\/(\d+)/);
-  return m ? m[1] : null;
-}
-
 function tautulliImage(path: string, width?: number, height?: number): string {
   const base = `/api/modules/tautulli?cmd=get_image&img=${encodeURIComponent(path)}`;
   if (width && height) return `${base}&width=${width}&height=${height}`;
@@ -61,17 +52,22 @@ function transcodeLabel(decision: string): string {
 function SessionPoster({ s }: { s: TautulliSession }) {
   const isTV = s.media_type === 'episode';
   const thumb = isTV ? s.grandparent_thumb : s.thumb;
-
-  // Prefer TMDB poster; fall back to Tautulli proxy; fall back to placeholder
-  const tmdbId = isTV
-    ? parseTmdbId(s.grandparent_guid)
-    : (s.tmdb_id ? String(s.tmdb_id) : parseTmdbId(s.guid));
   const tautulliSrc = thumb ? tautulliImage(thumb, 64, 96) : null;
-  const initialSrc = tmdbId
-    ? `/api/tmdb/poster?id=${tmdbId}&type=${isTV ? 'tv' : 'movie'}`
-    : tautulliSrc;
 
-  const [src, setSrc] = useState<string | null>(initialSrc);
+  const [src, setSrc] = useState<string | null>(tautulliSrc);
+
+  useEffect(() => {
+    const ratingKey = isTV ? s.grandparent_rating_key : s.rating_key;
+    const type = isTV ? 'tv' : 'movie';
+    if (!ratingKey) return;
+
+    fetch(`/api/tmdb/id?rating_key=${encodeURIComponent(ratingKey)}`)
+      .then((r) => r.json())
+      .then((d: { tmdbId: string | null }) => {
+        if (d.tmdbId) setSrc(`/api/tmdb/poster?id=${d.tmdbId}&type=${type}`);
+      })
+      .catch(() => {});
+  }, [s.rating_key, s.grandparent_rating_key, isTV]);
 
   function handleError() {
     if (tautulliSrc && src !== tautulliSrc) setSrc(tautulliSrc);
@@ -151,18 +147,7 @@ export default function NowPlayingWidget() {
     fetch('/api/modules/tautulli?cmd=get_activity')
       .then((r) => r.json())
       .then((d: ActivityResponse) => {
-        const sessions = d?.response?.data?.sessions ?? [];
-        if (sessions.length > 0) {
-          const s = sessions[0];
-          console.log('[atrium/NowPlayingWidget] first session TMDB fields:', {
-            media_type: s.media_type,
-            tmdb_id: s.tmdb_id,
-            guid: s.guid,
-            grandparent_guid: s.grandparent_guid,
-          });
-          console.log('[atrium/NowPlayingWidget] full first session:', s);
-        }
-        setSessions(sessions);
+        setSessions(d?.response?.data?.sessions ?? []);
       })
       .catch(() => {})
       .finally(() => setLoading(false));

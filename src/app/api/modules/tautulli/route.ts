@@ -6,6 +6,7 @@ const ALLOWED_CMDS = new Set([
   'get_activity',
   'get_recently_added',
   'get_image',
+  'get_metadata',
   'get_user_stats',
   'get_plays_by_date',
   'get_plays_by_dayofweek',
@@ -84,6 +85,12 @@ export async function GET(req: NextRequest) {
 
     if (cmd === 'get_recently_added') {
       params.set('count', searchParams.get('count') ?? '10');
+    }
+
+    if (cmd === 'get_metadata') {
+      const ratingKey = searchParams.get('rating_key');
+      if (!ratingKey) return NextResponse.json({ error: 'Missing rating_key' }, { status: 400 });
+      params.set('rating_key', ratingKey);
     }
 
     if (STAT_CMDS.has(cmd)) {
