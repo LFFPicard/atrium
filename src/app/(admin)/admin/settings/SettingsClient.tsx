@@ -19,6 +19,7 @@ interface InitialSettings {
   donation_placement: string;
   site_name: string;
   admin_email: string;
+  tmdb_api_key: string;
 }
 
 const VAR_GROUPS: { label: string; vars: (keyof ThemeVars)[] }[] = [
@@ -78,6 +79,7 @@ export default function SettingsClient({ initial }: { initial: InitialSettings }
 
   const [siteName, setSiteName] = useState(initial.site_name);
   const [adminEmail, setAdminEmail] = useState(initial.admin_email);
+  const [tmdbApiKey, setTmdbApiKey] = useState(initial.tmdb_api_key);
 
   const activeTheme = themes.find((t) => t.id === themePreset) ?? themes[0];
 
@@ -129,6 +131,7 @@ export default function SettingsClient({ initial }: { initial: InitialSettings }
           donation_placement: donationPlacement,
           site_name: siteName,
           admin_email: adminEmail,
+          tmdb_api_key: tmdbApiKey,
         }),
       });
       setToast('Settings saved');
@@ -390,6 +393,31 @@ export default function SettingsClient({ initial }: { initial: InitialSettings }
             />
             <p className="mt-1 text-xs text-(--color-text-muted)">
               Used as the From address for system emails.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-(--color-text) mb-1.5">TMDB API key</label>
+            <input
+              type="password"
+              value={tmdbApiKey}
+              onChange={(e) => setTmdbApiKey(e.target.value)}
+              placeholder="••••••••••••••••••••••••••••••••"
+              autoComplete="new-password"
+              className="w-full bg-(--color-surface) border border-(--color-border) rounded-lg px-3 py-2 text-sm text-(--color-text) placeholder:text-(--color-text-muted) focus:outline-none focus:border-(--color-accent)"
+            />
+            <p className="mt-1 text-xs text-(--color-text-muted)">
+              Optional. Used to load poster images from TMDB instead of through Tautulli.
+              Free API keys available at{' '}
+              <a
+                href="https://www.themoviedb.org/settings/api"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-(--color-accent) hover:underline"
+              >
+                themoviedb.org
+              </a>
+              .
             </p>
           </div>
         </div>

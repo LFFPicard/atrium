@@ -16,6 +16,7 @@ export default function AdminSettingsPage() {
     'donation_placement',
     'site_name',
     'admin_email',
+    'tmdb_api_key',
   ]);
 
   const initial = {
@@ -31,6 +32,7 @@ export default function AdminSettingsPage() {
     donation_placement: (raw.donation_placement as string) ?? 'sidebar',
     site_name: (raw.site_name as string) ?? 'Atrium',
     admin_email: (raw.admin_email as string) ?? '',
+    tmdb_api_key: (raw.tmdb_api_key as string) ?? '',
   };
 
   return (

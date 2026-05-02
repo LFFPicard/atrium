@@ -6,12 +6,12 @@ import type { LinePoint, PlatformPoint } from './StatsCharts';
 
 const PlaysLineChart = dynamic(
   () => import('./StatsCharts').then((m) => ({ default: m.PlaysLineChart })),
-  { ssr: false, loading: () => <div className="h-[220px] animate-pulse bg-(--color-bg) rounded-lg" /> },
+  { ssr: false, loading: () => <div className="h-55 animate-pulse bg-(--color-bg) rounded-lg" /> },
 );
 
 const PlatformBarChart = dynamic(
   () => import('./StatsCharts').then((m) => ({ default: m.PlatformBarChart })),
-  { ssr: false, loading: () => <div className="h-[100px] animate-pulse bg-(--color-bg) rounded-lg" /> },
+  { ssr: false, loading: () => <div className="h-25 animate-pulse bg-(--color-bg) rounded-lg" /> },
 );
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -36,6 +36,11 @@ interface HomeStatItem {
   thumb?: string;
   title?: string;
   total_plays?: number;
+  // TMDB IDs — present in newer Tautulli versions
+  tmdb_id?: number | null;
+  guid?: string;
+  grandparent_guid?: string;
+  media_type?: string;
 }
 
 interface HomeStatsResponse {
@@ -50,6 +55,12 @@ interface HeatPoint { label: string; value: number; }
 
 function tautulliImage(path: string): string {
   return `/api/modules/tautulli?cmd=get_image&img=${encodeURIComponent(path)}`;
+}
+
+function parseTmdbId(guid?: string): string | null {
+  if (!guid) return null;
+  const m = guid.match(/^tmdb:\/\/(\d+)/);
+  return m ? m[1] : null;
 }
 
 function formatDuration(seconds: number): string {
@@ -139,9 +150,15 @@ function SectionCard({ title, children }: { title: string; children: React.React
   );
 }
 
-function Thumb({ src, alt }: { src?: string; alt: string }) {
-  const [err, setErr] = useState(false);
-  if (!src || err) {
+function Thumb({ src, fallbackSrc, alt }: { src?: string; fallbackSrc?: string; alt: string }) {
+  const [imgSrc, setImgSrc] = useState<string | null>(src ?? null);
+
+  function handleError() {
+    if (fallbackSrc && imgSrc !== fallbackSrc) setImgSrc(fallbackSrc);
+    else setImgSrc(null);
+  }
+
+  if (!imgSrc) {
     return (
       <div className="w-8 h-12 bg-(--color-border) rounded shrink-0 flex items-center justify-center">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-4 h-4 text-(--color-text-muted)">
@@ -152,7 +169,7 @@ function Thumb({ src, alt }: { src?: string; alt: string }) {
     );
   }
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={src} alt={alt} className="w-8 h-12 object-cover rounded shrink-0" onError={() => setErr(true)} />;
+  return <img src={imgSrc} alt={alt} className="w-8 h-12 object-cover rounded shrink-0" onError={handleError} />;
 }
 
 function TopList({
@@ -176,10 +193,21 @@ function TopList({
                 ? (item.friendly_name ?? 'Unknown')
                 : (item.title ?? item.grandparent_title ?? 'Unknown');
             const plays = item.total_plays ?? item.count ?? 0;
-            // For TV shows Tautulli may return episode-level rows where grandparent_thumb
-            // is the show poster; fall back to thumb (correct for movies and show-level rows).
+            // For show-level rows use grandparent_thumb if available (episode-level data);
+            // fall back to thumb for movies and show-aggregated rows.
             const posterPath = item.grandparent_thumb ?? item.thumb;
-            const thumbSrc = type !== 'user' && posterPath ? tautulliImage(posterPath) : undefined;
+            const tautulliSrc = type !== 'user' && posterPath ? tautulliImage(posterPath) : undefined;
+
+            // Prefer TMDB poster; fall back to Tautulli proxy
+            const isTV = item.media_type === 'episode' || item.media_type === 'show';
+            const tmdbId = isTV
+              ? parseTmdbId(item.grandparent_guid) ?? (item.tmdb_id ? String(item.tmdb_id) : null)
+              : (item.tmdb_id ? String(item.tmdb_id) : parseTmdbId(item.guid));
+            const thumbSrc = type !== 'user'
+              ? (tmdbId
+                  ? `/api/tmdb/poster?id=${tmdbId}&type=${isTV ? 'tv' : 'movie'}&size=w92`
+                  : tautulliSrc)
+              : undefined;
             return (
               <li key={i} className="flex items-center gap-2.5">
                 <span className="text-xs font-semibold text-(--color-text-muted) w-4 text-right shrink-0">
@@ -190,7 +218,7 @@ function TopList({
                     {name.slice(0, 1).toUpperCase()}
                   </div>
                 ) : (
-                  <Thumb src={thumbSrc} alt={name} />
+                  <Thumb src={thumbSrc} fallbackSrc={tautulliSrc} alt={name} />
                 )}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-(--color-text) truncate">{name}</p>

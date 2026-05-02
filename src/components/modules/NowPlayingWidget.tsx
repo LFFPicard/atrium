@@ -13,6 +13,10 @@ interface TautulliSession {
   media_type: string;
   thumb: string;
   grandparent_thumb: string;
+  // TMDB IDs — present in newer Tautulli versions
+  tmdb_id?: number | null;
+  guid?: string;               // e.g. "tmdb://12345" for movies
+  grandparent_guid?: string;   // e.g. "tmdb://67890" for TV shows
   progress_percent: string;
   duration: number;
   view_offset: number;
@@ -34,6 +38,13 @@ interface ActivityResponse {
   error?: string;
 }
 
+// Extract a numeric TMDB ID from a Tautulli guid string like "tmdb://12345"
+function parseTmdbId(guid?: string): string | null {
+  if (!guid) return null;
+  const m = guid.match(/^tmdb:\/\/(\d+)/);
+  return m ? m[1] : null;
+}
+
 function tautulliImage(path: string, width?: number, height?: number): string {
   const base = `/api/modules/tautulli?cmd=get_image&img=${encodeURIComponent(path)}`;
   if (width && height) return `${base}&width=${width}&height=${height}`;
@@ -47,11 +58,44 @@ function transcodeLabel(decision: string): string {
   return decision;
 }
 
+function SessionPoster({ s }: { s: TautulliSession }) {
+  const isTV = s.media_type === 'episode';
+  const thumb = isTV ? s.grandparent_thumb : s.thumb;
+
+  // Prefer TMDB poster; fall back to Tautulli proxy; fall back to placeholder
+  const tmdbId = isTV
+    ? parseTmdbId(s.grandparent_guid)
+    : (s.tmdb_id ? String(s.tmdb_id) : parseTmdbId(s.guid));
+  const tautulliSrc = thumb ? tautulliImage(thumb, 64, 96) : null;
+  const initialSrc = tmdbId
+    ? `/api/tmdb/poster?id=${tmdbId}&type=${isTV ? 'tv' : 'movie'}`
+    : tautulliSrc;
+
+  const [src, setSrc] = useState<string | null>(initialSrc);
+
+  function handleError() {
+    if (tautulliSrc && src !== tautulliSrc) setSrc(tautulliSrc);
+    else setSrc(null);
+  }
+
+  if (!src) {
+    return (
+      <div className="relative shrink-0 w-10 h-15 rounded overflow-hidden bg-(--color-border)" />
+    );
+  }
+
+  return (
+    <div className="relative shrink-0 w-10 h-15 rounded overflow-hidden bg-(--color-border)">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt="" className="w-full h-full object-cover" onError={handleError} />
+    </div>
+  );
+}
+
 function SessionCard({ s }: { s: TautulliSession }) {
   const isTV = s.media_type === 'episode';
   const title = isTV ? s.grandparent_title : s.title;
   const subtitle = isTV ? `${s.parent_title} — ${s.title}` : String(s.year || '');
-  const thumb = isTV ? s.grandparent_thumb : s.thumb;
   const progress = Math.min(100, Math.max(0, parseInt(s.progress_percent, 10) || 0));
   const resolution = s.stream_video_resolution ? `${s.stream_video_resolution}p` : '';
   const tLabel = transcodeLabel(s.transcode_decision ?? '');
@@ -61,12 +105,7 @@ function SessionCard({ s }: { s: TautulliSession }) {
 
   return (
     <div className="flex items-start gap-3 p-3 bg-(--color-bg) rounded-lg">
-      <div className="relative shrink-0 w-10 h-15 rounded overflow-hidden bg-(--color-border)">
-        {thumb && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={tautulliImage(thumb, 64, 96)} alt="" className="w-full h-full object-cover" />
-        )}
-      </div>
+      <SessionPoster s={s} />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-(--color-text) truncate">{title}</p>
         {subtitle && <p className="text-xs text-(--color-text-muted) truncate">{subtitle}</p>}

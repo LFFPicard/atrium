@@ -11,6 +11,10 @@ interface RecentItem {
   parent_title: string;
   thumb: string;
   grandparent_thumb: string;
+  // TMDB IDs — present in newer Tautulli versions
+  tmdb_id?: number | null;
+  guid?: string;              // e.g. "tmdb://12345" for movies
+  grandparent_guid?: string;  // e.g. "tmdb://67890" for TV shows
 }
 
 interface RecentlyAddedResponse {
@@ -28,44 +32,69 @@ function timeAgo(ts: number): string {
   return `${Math.floor(secs / 86400)}d ago`;
 }
 
+function parseTmdbId(guid?: string): string | null {
+  if (!guid) return null;
+  const m = guid.match(/^tmdb:\/\/(\d+)/);
+  return m ? m[1] : null;
+}
+
 function tautulliImage(path: string, width?: number, height?: number): string {
   const base = `/api/modules/tautulli?cmd=get_image&img=${encodeURIComponent(path)}`;
   if (width && height) return `${base}&width=${width}&height=${height}`;
   return base;
 }
 
+function FilmPlaceholder() {
+  return (
+    <div className="w-full h-full flex items-center justify-center">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1} strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8 text-(--color-border)">
+        <rect x="2" y="2" width="20" height="20" rx="2.18" />
+        <line x1="7" y1="2" x2="7" y2="22" />
+        <line x1="17" y1="2" x2="17" y2="22" />
+        <line x1="2" y1="12" x2="22" y2="12" />
+        <line x1="2" y1="7" x2="7" y2="7" />
+        <line x1="2" y1="17" x2="7" y2="17" />
+        <line x1="17" y1="17" x2="22" y2="17" />
+        <line x1="17" y1="7" x2="22" y2="7" />
+      </svg>
+    </div>
+  );
+}
+
 function PosterCard({ item }: { item: RecentItem }) {
-  const [err, setErr] = useState(false);
   const isTV = item.media_type === 'episode';
   const label = isTV ? item.grandparent_title : item.title;
   // TV episodes: grandparent_thumb is the show poster; movies: thumb is the movie poster
   const thumb = isTV ? item.grandparent_thumb : item.thumb;
-  const src = tautulliImage(thumb, 150, 225);
+
+  const tmdbId = isTV
+    ? parseTmdbId(item.grandparent_guid)
+    : (item.tmdb_id ? String(item.tmdb_id) : parseTmdbId(item.guid));
+  const tautulliSrc = thumb ? tautulliImage(thumb, 150, 225) : null;
+  const initialSrc = tmdbId
+    ? `/api/tmdb/poster?id=${tmdbId}&type=${isTV ? 'tv' : 'movie'}&size=w200`
+    : tautulliSrc;
+
+  const [src, setSrc] = useState<string | null>(initialSrc);
+
+  function handleError() {
+    if (tautulliSrc && src !== tautulliSrc) setSrc(tautulliSrc);
+    else setSrc(null);
+  }
 
   return (
     <div className="group">
       <div className="aspect-2/3 bg-(--color-bg) rounded-lg overflow-hidden border border-(--color-border)">
-        {thumb && !err ? (
+        {src ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={src}
             alt={label}
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            onError={() => setErr(true)}
+            onError={handleError}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1} strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8 text-(--color-border)">
-              <rect x="2" y="2" width="20" height="20" rx="2.18" />
-              <line x1="7" y1="2" x2="7" y2="22" />
-              <line x1="17" y1="2" x2="17" y2="22" />
-              <line x1="2" y1="12" x2="22" y2="12" />
-              <line x1="2" y1="7" x2="7" y2="7" />
-              <line x1="2" y1="17" x2="7" y2="17" />
-              <line x1="17" y1="17" x2="22" y2="17" />
-              <line x1="17" y1="7" x2="22" y2="7" />
-            </svg>
-          </div>
+          <FilmPlaceholder />
         )}
       </div>
       <p className="mt-1.5 text-xs font-medium text-(--color-text) truncate leading-tight">{label}</p>
