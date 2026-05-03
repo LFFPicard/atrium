@@ -7,6 +7,7 @@ const ALLOWED_CMDS = new Set([
   'get_recently_added',
   'get_image',
   'get_metadata',
+  'get_libraries',
   'get_user_stats',
   'get_plays_by_date',
   'get_plays_by_dayofweek',

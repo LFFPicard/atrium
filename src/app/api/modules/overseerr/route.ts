@@ -55,7 +55,11 @@ export async function GET(req: NextRequest) {
     const take = Math.min(Math.max(parseInt(searchParams.get('take') ?? '20', 10), 1), 100);
     const skip = Math.max(parseInt(searchParams.get('skip') ?? '0', 10), 0);
 
+    const ALLOWED_SORTS = new Set(['added', 'modified']);
+    const sort = searchParams.get('sort') ?? '';
+
     const params = new URLSearchParams({ filter, take: String(take), skip: String(skip) });
+    if (sort && ALLOWED_SORTS.has(sort)) params.set('sort', sort);
     const res = await fetch(`${overseerrBase}/api/v1/request?${params}`, {
       headers: { 'X-Api-Key': key },
       signal: AbortSignal.timeout(15_000),

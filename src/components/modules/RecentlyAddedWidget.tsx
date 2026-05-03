@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import MediaDetailModal from './MediaDetailModal';
 
 interface RecentItem {
   title: string;
@@ -39,7 +40,7 @@ function tautulliImage(path: string, width?: number, height?: number): string {
 function FilmPlaceholder() {
   return (
     <div className="w-full h-full flex items-center justify-center">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1} strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8 text-(--color-border)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-(--color-border)">
         <rect x="2" y="2" width="20" height="20" rx="2.18" />
         <line x1="7" y1="2" x2="7" y2="22" />
         <line x1="17" y1="2" x2="17" y2="22" />
@@ -58,8 +59,8 @@ function PosterCard({ item }: { item: RecentItem }) {
   const label = isTV ? item.grandparent_title : item.title;
   const thumb = isTV ? item.grandparent_thumb : item.thumb;
   const tautulliSrc = thumb ? tautulliImage(thumb, 150, 225) : null;
-
   const [src, setSrc] = useState<string | null>(tautulliSrc);
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     const ratingKey = isTV ? item.grandparent_rating_key : item.rating_key;
@@ -79,24 +80,48 @@ function PosterCard({ item }: { item: RecentItem }) {
     else setSrc(null);
   }
 
+  const age = timeAgo(item.added_at);
+  const modalRatingKey = isTV ? item.grandparent_rating_key : item.rating_key;
+  const modalType: 'tv' | 'movie' = isTV ? 'tv' : 'movie';
+
   return (
-    <div className="group">
-      <div className="aspect-2/3 bg-(--color-bg) rounded-lg overflow-hidden border border-(--color-border)">
-        {src ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={src}
-            alt={label}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            onError={handleError}
-          />
-        ) : (
-          <FilmPlaceholder />
-        )}
+    <>
+      <div
+        className="group/poster cursor-pointer"
+        onClick={() => setShowModal(true)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setShowModal(true); }}
+        title={`${label} · ${age}`}
+      >
+        <div className="relative aspect-2/3 w-full rounded-md overflow-hidden bg-(--color-bg) border border-(--color-border)">
+          {src ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={src}
+              alt={label}
+              className="w-full h-full object-cover group-hover/poster:scale-105 transition-transform duration-300"
+              onError={handleError}
+            />
+          ) : (
+            <FilmPlaceholder />
+          )}
+          {/* Title overlay — visible on hover */}
+          <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent opacity-0 group-hover/poster:opacity-100 transition-opacity flex items-end p-1.5 pointer-events-none">
+            <p className="text-[9px] font-semibold text-white leading-tight line-clamp-2">{label}</p>
+          </div>
+        </div>
+        <p className="mt-1 text-xs text-(--color-text-muted) truncate leading-tight">{label}</p>
       </div>
-      <p className="mt-1.5 text-xs font-medium text-(--color-text) truncate leading-tight">{label}</p>
-      <p className="text-xs text-(--color-text-muted)">{timeAgo(item.added_at)}</p>
-    </div>
+
+      {showModal && modalRatingKey && (
+        <MediaDetailModal
+          ratingKey={modalRatingKey}
+          type={modalType}
+          onClose={() => setShowModal(false)}
+        />
+      )}
+    </>
   );
 }
 
@@ -123,11 +148,11 @@ export default function RecentlyAddedWidget() {
         </svg>
         <p className="text-sm font-semibold text-(--color-text)">Recently Added</p>
       </div>
-      <div className="p-4">
+      <div className="p-3">
         {loading ? (
-          <div className="grid grid-cols-5 gap-3">
+          <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
             {Array.from({ length: 10 }).map((_, i) => (
-              <div key={i} className="aspect-2/3 bg-(--color-bg) rounded-lg animate-pulse border border-(--color-border)" />
+              <div key={i} className="aspect-2/3 bg-(--color-bg) rounded-md animate-pulse border border-(--color-border)" />
             ))}
           </div>
         ) : items.length === 0 ? (
@@ -135,7 +160,7 @@ export default function RecentlyAddedWidget() {
             <p className="text-sm text-(--color-text-muted)">Nothing recently added.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-5 gap-3">
+          <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
             {items.map((item, i) => (
               <PosterCard key={i} item={item} />
             ))}

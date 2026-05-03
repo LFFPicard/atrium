@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import MediaDetailModal from './MediaDetailModal';
 
 interface TautulliSession {
   session_id: string;
@@ -74,22 +75,38 @@ function SessionPoster({ s }: { s: TautulliSession }) {
     else setSrc(null);
   }
 
-  if (!src) {
-    return (
-      <div className="relative shrink-0 w-10 h-15 rounded overflow-hidden bg-(--color-border)" />
-    );
-  }
+  const resolution = s.stream_video_resolution ? `${s.stream_video_resolution}p` : '';
+  const codec = s.stream_video_codec ? s.stream_video_codec.toUpperCase() : '';
+  const quality = [resolution, codec].filter(Boolean).join(' ');
+  const tLabel = transcodeLabel(s.transcode_decision ?? '');
+  const displayName = s.friendly_name || s.user;
 
   return (
-    <div className="relative shrink-0 w-10 h-15 rounded overflow-hidden bg-(--color-border)">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt="" className="w-full h-full object-cover" onError={handleError} />
+    <div className="group/poster relative shrink-0 w-10 h-15 rounded overflow-hidden bg-(--color-border)">
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={src} alt="" className="w-full h-full object-cover" onError={handleError} />
+      ) : null}
+      {/* Stream detail overlay — shown on poster hover */}
+      <div className="absolute inset-0 bg-black/85 opacity-0 group-hover/poster:opacity-100 transition-opacity flex flex-col justify-end p-1 gap-px pointer-events-none">
+        {displayName && (
+          <p className="text-[8px] font-semibold text-white leading-none truncate">{displayName}</p>
+        )}
+        {quality && (
+          <p className="text-[8px] text-white/75 leading-none truncate">{quality}</p>
+        )}
+        {tLabel && (
+          <p className="text-[8px] text-white/75 leading-none truncate">{tLabel}</p>
+        )}
+      </div>
     </div>
   );
 }
 
 function SessionCard({ s }: { s: TautulliSession }) {
   const isTV = s.media_type === 'episode';
+  const [showModal, setShowModal] = useState(false);
+
   const title = isTV ? s.grandparent_title : s.title;
   const subtitle = isTV ? `${s.parent_title} — ${s.title}` : String(s.year || '');
   const progress = Math.min(100, Math.max(0, parseInt(s.progress_percent, 10) || 0));
@@ -99,30 +116,49 @@ function SessionCard({ s }: { s: TautulliSession }) {
   const paused = s.state === 'paused';
   const displayName = s.friendly_name || s.user;
 
+  const modalRatingKey = isTV ? s.grandparent_rating_key : s.rating_key;
+  const modalType: 'tv' | 'movie' = isTV ? 'tv' : 'movie';
+
   return (
-    <div className="flex items-start gap-3 p-3 bg-(--color-bg) rounded-lg">
-      <SessionPoster s={s} />
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-(--color-text) truncate">{title}</p>
-        {subtitle && <p className="text-xs text-(--color-text-muted) truncate">{subtitle}</p>}
-        <div className="mt-2 h-1 bg-(--color-border) rounded-full overflow-hidden">
-          <div
-            className="h-full bg-(--color-accent) rounded-full transition-all"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-          <span className="text-xs text-(--color-text-muted)">
-            {paused ? '⏸' : '▶'} {displayName}
-          </span>
-          {qualityBadge && (
-            <span className="text-xs px-1.5 py-0.5 rounded bg-(--color-surface) border border-(--color-border) text-(--color-text-muted)">
-              {qualityBadge}
+    <>
+      <div
+        className="flex items-start gap-3 p-3 bg-(--color-bg) rounded-lg cursor-pointer hover:bg-(--color-surface) transition-colors"
+        onClick={() => setShowModal(true)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setShowModal(true); }}
+      >
+        <SessionPoster s={s} />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-(--color-text) truncate">{title}</p>
+          {subtitle && <p className="text-xs text-(--color-text-muted) truncate">{subtitle}</p>}
+          <div className="mt-2 h-1 bg-(--color-border) rounded-full overflow-hidden">
+            <div
+              className="h-full bg-(--color-accent) rounded-full transition-all"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+            <span className="text-xs text-(--color-text-muted)">
+              {paused ? '⏸' : '▶'} {displayName}
             </span>
-          )}
+            {qualityBadge && (
+              <span className="text-xs px-1.5 py-0.5 rounded bg-(--color-surface) border border-(--color-border) text-(--color-text-muted)">
+                {qualityBadge}
+              </span>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+
+      {showModal && modalRatingKey && (
+        <MediaDetailModal
+          ratingKey={modalRatingKey}
+          type={modalType}
+          onClose={() => setShowModal(false)}
+        />
+      )}
+    </>
   );
 }
 

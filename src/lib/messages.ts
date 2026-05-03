@@ -102,6 +102,27 @@ export function deleteMessage(id: string): void {
   db.delete(messages).where(eq(messages.id, id)).run();
 }
 
+export function getUnreadMessages(userId: string, role: string, limit = 3): MessageWithUsers[] {
+  const condition =
+    role === 'admin'
+      ? and(
+          or(isNull(messages.toUserId), eq(messages.toUserId, userId)),
+          eq(messages.read, false),
+          ne(messages.fromUserId, userId),
+        )
+      : and(eq(messages.toUserId, userId), eq(messages.read, false));
+
+  const rows = db
+    .select()
+    .from(messages)
+    .where(condition)
+    .orderBy(desc(messages.createdAt))
+    .limit(limit)
+    .all();
+
+  return attachUsers(rows);
+}
+
 export function getUnreadCount(userId: string, role: string): number {
   const condition =
     role === 'admin'

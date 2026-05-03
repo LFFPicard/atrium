@@ -11,6 +11,16 @@ interface PlaysResponse {
   };
 }
 
+interface HomeStatRow {
+  user: string;
+  friendly_name: string;
+  total_plays: number;
+}
+
+interface HomeStatsResponse {
+  response?: { data?: Array<{ stat_id: string; rows: HomeStatRow[] }> };
+}
+
 function formatDuration(seconds: number): string {
   if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
   const hours = Math.floor(seconds / 3600);
@@ -28,26 +38,47 @@ function sumSeries(resp: PlaysResponse): number {
   );
 }
 
-export default function StatsWidget() {
+export default function StatsWidget({ isAdmin = false }: { isAdmin?: boolean }) {
   const [loading, setLoading] = useState(true);
-  const [plays, setPlays] = useState<number | null>(null);
-  const [seconds, setSeconds] = useState<number | null>(null);
+  const [plays30, setPlays30] = useState<number | null>(null);
+  const [seconds30, setSeconds30] = useState<number | null>(null);
+  const [plays7, setPlays7] = useState<number | null>(null);
+  const [topUser, setTopUser] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
       try {
-        const [playsRes, durRes] = await Promise.all([
-          fetch('/api/modules/tautulli?cmd=get_plays_by_date&time_range=30'),
-          fetch('/api/modules/tautulli?cmd=get_plays_by_date&time_range=30&y_axis=duration'),
-        ]);
-        if (playsRes.ok) setPlays(sumSeries((await playsRes.json()) as PlaysResponse));
-        if (durRes.ok) setSeconds(sumSeries((await durRes.json()) as PlaysResponse));
+        const fetches: Promise<void>[] = [
+          fetch('/api/modules/tautulli?cmd=get_plays_by_date&time_range=30')
+            .then((r) => r.ok ? r.json() : null)
+            .then((d: PlaysResponse | null) => { if (d) setPlays30(sumSeries(d)); }),
+          fetch('/api/modules/tautulli?cmd=get_plays_by_date&time_range=30&y_axis=duration')
+            .then((r) => r.ok ? r.json() : null)
+            .then((d: PlaysResponse | null) => { if (d) setSeconds30(sumSeries(d)); }),
+          fetch('/api/modules/tautulli?cmd=get_plays_by_date&time_range=7')
+            .then((r) => r.ok ? r.json() : null)
+            .then((d: PlaysResponse | null) => { if (d) setPlays7(sumSeries(d)); }),
+        ];
+
+        if (isAdmin) {
+          fetches.push(
+            fetch('/api/modules/tautulli?cmd=get_home_stats&stat_id=top_users&stats_count=1&time_range=30')
+              .then((r) => r.ok ? r.json() : null)
+              .then((d: HomeStatsResponse | null) => {
+                const rows = d?.response?.data?.find((s) => s.stat_id === 'top_users')?.rows ?? [];
+                const top = rows[0];
+                if (top) setTopUser(top.friendly_name || top.user);
+              }),
+          );
+        }
+
+        await Promise.all(fetches);
       } finally {
         setLoading(false);
       }
     }
     void load();
-  }, []);
+  }, [isAdmin]);
 
   if (loading) {
     return (
@@ -56,15 +87,31 @@ export default function StatsWidget() {
           <div className="w-4 h-4 rounded bg-(--color-border)" />
           <div className="w-28 h-4 rounded bg-(--color-border)" />
         </div>
-        <div className="grid grid-cols-2 divide-x divide-(--color-border)">
-          <div className="p-4 h-20" />
-          <div className="p-4 h-20" />
+        <div className={`grid ${isAdmin ? 'grid-cols-2' : 'grid-cols-3'} divide-x divide-(--color-border)`}>
+          {Array.from({ length: isAdmin ? 4 : 3 }).map((_, i) => (
+            <div key={i} className="p-4 h-20" />
+          ))}
         </div>
       </div>
     );
   }
 
-  if (plays === null && seconds === null) return null;
+  if (plays30 === null && seconds30 === null) return null;
+
+  const cells = isAdmin
+    ? [
+        { label: 'Total Plays', value: plays30 !== null ? plays30.toLocaleString() : '—' },
+        { label: 'Watch Time', value: seconds30 !== null && seconds30 > 0 ? formatDuration(seconds30) : '—' },
+        { label: 'Streams This Week', value: plays7 !== null ? plays7.toLocaleString() : '—' },
+        { label: 'Top User (30d)', value: topUser ?? '—' },
+      ]
+    : [
+        { label: 'Total Plays', value: plays30 !== null ? plays30.toLocaleString() : '—' },
+        { label: 'Watch Time', value: seconds30 !== null && seconds30 > 0 ? formatDuration(seconds30) : '—' },
+        { label: 'Streams This Week', value: plays7 !== null ? plays7.toLocaleString() : '—' },
+      ];
+
+  const gridCols = isAdmin ? 'grid-cols-2' : 'grid-cols-3';
 
   return (
     <div className="bg-(--color-surface) border border-(--color-border) rounded-xl overflow-hidden">
@@ -82,19 +129,13 @@ export default function StatsWidget() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-2 divide-x divide-(--color-border)">
-        <div className="p-4">
-          <p className="text-xs text-(--color-text-muted) mb-1">Total Plays</p>
-          <p className="text-2xl font-bold text-(--color-text) tabular-nums">
-            {plays !== null ? plays.toLocaleString() : '—'}
-          </p>
-        </div>
-        <div className="p-4">
-          <p className="text-xs text-(--color-text-muted) mb-1">Watch Time</p>
-          <p className="text-2xl font-bold text-(--color-text)">
-            {seconds !== null && seconds > 0 ? formatDuration(seconds) : '—'}
-          </p>
-        </div>
+      <div className={`grid ${gridCols} divide-x divide-(--color-border) ${isAdmin ? 'divide-y' : ''}`}>
+        {cells.map((cell) => (
+          <div key={cell.label} className="p-4">
+            <p className="text-xs text-(--color-text-muted) mb-1">{cell.label}</p>
+            <p className="text-2xl font-bold text-(--color-text) tabular-nums truncate">{cell.value}</p>
+          </div>
+        ))}
       </div>
     </div>
   );

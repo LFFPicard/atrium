@@ -10,6 +10,8 @@ import CalendarWidget from '@/components/modules/CalendarWidget';
 import StatsWidget from '@/components/modules/StatsWidget';
 import WrappedWidget from '@/components/modules/WrappedWidget';
 import OverseerrWidget from '@/components/modules/OverseerrWidget';
+import LibraryStatsWidget from '@/components/modules/LibraryStatsWidget';
+import MessagesWidget from '@/components/modules/MessagesWidget';
 import { getDashboardWidgets } from '@/lib/dashboard';
 import { getAllTabs } from '@/lib/tabs';
 import { getSetting } from '@/lib/settings';
@@ -34,7 +36,7 @@ function EmptyDashboard({ isAdmin }: { isAdmin: boolean }) {
       <p className="text-sm text-(--color-text-muted) max-w-sm leading-relaxed mb-6">
         {isAdmin
           ? 'Connect Tautulli to see now playing and recently added, enable the Uptime Monitor to track your services, or add tabs to create quick links to your homelab apps.'
-          : 'Your admin hasn’t enabled any modules yet. Check back soon.'}
+          : "Your admin hasn't enabled any modules yet. Check back soon."}
       </p>
       {isAdmin && (
         <Link
@@ -80,6 +82,9 @@ export default async function DashboardPage() {
         <p className="text-sm text-(--color-text-muted) mt-0.5">Your homelab at a glance.</p>
       </div>
 
+      {/* Messages widget — self-hiding when inbox is clear, always rendered */}
+      <MessagesWidget />
+
       {isEmpty ? (
         <EmptyDashboard isAdmin={isAdmin} />
       ) : (
@@ -99,7 +104,14 @@ export default async function DashboardPage() {
           </ModuleGate>
 
           {/* Stats — single column */}
-          {activeWidgets.includes('stats') && <StatsWidget />}
+          {activeWidgets.includes('stats') && <StatsWidget isAdmin={isAdmin} />}
+
+          {/* Library Stats — single column */}
+          {activeWidgets.includes('library-stats') && (
+            <ModuleGate slug="tautulli">
+              <LibraryStatsWidget />
+            </ModuleGate>
+          )}
 
           {/* Wrapped — single column */}
           {activeWidgets.includes('wrapped') && <WrappedWidget />}
