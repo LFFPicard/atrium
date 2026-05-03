@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import type { WrappedSummary, WrappedMediaItem, PlatformCount } from '@/lib/wrapped';
@@ -47,10 +47,33 @@ function hourLabel(h: number): string {
 
 // ── Shared sub-components ─────────────────────────────────────────────────────
 
-function PosterImg({ thumb, alt, className }: { thumb: string | null; alt: string; className: string }) {
-  const [err, setErr] = useState(false);
-  const src = imgSrc(thumb);
-  if (!src || err) {
+function PosterImg({ thumb, ratingKey, tmdbType, alt, className, size = 'w200' }: {
+  thumb: string | null;
+  ratingKey?: string;
+  tmdbType?: 'tv' | 'movie';
+  alt: string;
+  className: string;
+  size?: string;
+}) {
+  const tautulliSrc = imgSrc(thumb);
+  const [src, setSrc] = useState<string | undefined>(tautulliSrc);
+
+  useEffect(() => {
+    if (!ratingKey || !tmdbType) return;
+    fetch(`/api/tmdb/id?rating_key=${encodeURIComponent(ratingKey)}`)
+      .then((r) => r.json())
+      .then((d: { tmdbId: string | null }) => {
+        if (d.tmdbId) setSrc(`/api/tmdb/poster?id=${d.tmdbId}&type=${tmdbType}&size=${size}`);
+      })
+      .catch(() => {});
+  }, [ratingKey, tmdbType, size]);
+
+  function handleError() {
+    if (tautulliSrc && src !== tautulliSrc) setSrc(tautulliSrc);
+    else setSrc(undefined);
+  }
+
+  if (!src) {
     return (
       <div className={`${className} bg-(--color-border) flex items-center justify-center rounded`}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-6 h-6 text-(--color-text-muted)">
@@ -62,7 +85,7 @@ function PosterImg({ thumb, alt, className }: { thumb: string | null; alt: strin
   }
   return (
     // eslint-disable-next-line @next/next/no-img-element
-    <img src={src} alt={alt} className={`${className} object-cover rounded`} onError={() => setErr(true)} />
+    <img src={src} alt={alt} className={`${className} object-cover rounded`} onError={handleError} />
   );
 }
 
@@ -114,11 +137,12 @@ function HeroSection({ data }: { data: WrappedSummary }) {
 // ── Section: Top Media (shared for shows + movies) ────────────────────────────
 
 function TopPoster({ item, rank }: { item: WrappedMediaItem; rank: number }) {
+  const tmdbType = item.mediaType === 'show' ? 'tv' : 'movie';
   if (rank === 1) {
     return (
       <div className="flex gap-4 items-end">
         <div className="relative shrink-0">
-          <PosterImg thumb={item.thumb} alt={item.title} className="w-32 aspect-2/3" />
+          <PosterImg thumb={item.thumb} ratingKey={item.ratingKey} tmdbType={tmdbType} alt={item.title} className="w-32 aspect-2/3" />
           <span className="absolute -top-2 -left-2 w-7 h-7 rounded-full bg-(--color-accent) text-(--color-accent-text) text-xs font-black flex items-center justify-center shadow">1</span>
         </div>
         <div className="pb-1 min-w-0">
@@ -132,7 +156,7 @@ function TopPoster({ item, rank }: { item: WrappedMediaItem; rank: number }) {
   return (
     <div className="flex items-center gap-2.5">
       <span className="text-xs font-semibold text-(--color-text-muted) w-4 text-right shrink-0">{rank}</span>
-      <PosterImg thumb={item.thumb} alt={item.title} className="w-10 aspect-2/3 shrink-0" />
+      <PosterImg thumb={item.thumb} ratingKey={item.ratingKey} tmdbType={tmdbType} alt={item.title} className="w-10 aspect-2/3 shrink-0" size="w92" />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-(--color-text) truncate">{item.title}</p>
         <p className="text-xs text-(--color-text-muted)">{item.plays} plays</p>
@@ -257,10 +281,11 @@ function StreakSection({ streak }: { streak: number }) {
 // ── Section: First & Last ─────────────────────────────────────────────────────
 
 function FirstLastCard({ item, label }: { item: WrappedMediaItem; label: string }) {
+  const tmdbType = item.mediaType === 'show' ? 'tv' : 'movie';
   return (
     <div className="flex-1 min-w-0 flex flex-col items-center text-center gap-2">
       <p className="text-xs text-(--color-text-muted) font-semibold uppercase tracking-widest">{label}</p>
-      <PosterImg thumb={item.thumb} alt={item.title} className="w-24 aspect-2/3" />
+      <PosterImg thumb={item.thumb} ratingKey={item.ratingKey} tmdbType={tmdbType} alt={item.title} className="w-24 aspect-2/3" />
       <p className="text-sm font-medium text-(--color-text) leading-tight line-clamp-2">{item.title}</p>
       <p className="text-xs text-(--color-text-muted)">{item.mediaType === 'show' ? 'TV' : 'Movie'}</p>
     </div>

@@ -11,10 +11,8 @@ interface RecentItem {
   parent_title: string;
   thumb: string;
   grandparent_thumb: string;
-  // TMDB IDs — present in newer Tautulli versions
-  tmdb_id?: number | null;
-  guid?: string;              // e.g. "tmdb://12345" for movies
-  grandparent_guid?: string;  // e.g. "tmdb://67890" for TV shows
+  rating_key: string;
+  grandparent_rating_key: string;
 }
 
 interface RecentlyAddedResponse {
@@ -30,12 +28,6 @@ function timeAgo(ts: number): string {
   if (secs < 3600) return `${Math.max(1, Math.floor(secs / 60))}m ago`;
   if (secs < 86400) return `${Math.floor(secs / 3600)}h ago`;
   return `${Math.floor(secs / 86400)}d ago`;
-}
-
-function parseTmdbId(guid?: string): string | null {
-  if (!guid) return null;
-  const m = guid.match(/^tmdb:\/\/(\d+)/);
-  return m ? m[1] : null;
 }
 
 function tautulliImage(path: string, width?: number, height?: number): string {
@@ -64,18 +56,23 @@ function FilmPlaceholder() {
 function PosterCard({ item }: { item: RecentItem }) {
   const isTV = item.media_type === 'episode';
   const label = isTV ? item.grandparent_title : item.title;
-  // TV episodes: grandparent_thumb is the show poster; movies: thumb is the movie poster
   const thumb = isTV ? item.grandparent_thumb : item.thumb;
-
-  const tmdbId = isTV
-    ? parseTmdbId(item.grandparent_guid)
-    : (item.tmdb_id ? String(item.tmdb_id) : parseTmdbId(item.guid));
   const tautulliSrc = thumb ? tautulliImage(thumb, 150, 225) : null;
-  const initialSrc = tmdbId
-    ? `/api/tmdb/poster?id=${tmdbId}&type=${isTV ? 'tv' : 'movie'}&size=w200`
-    : tautulliSrc;
 
-  const [src, setSrc] = useState<string | null>(initialSrc);
+  const [src, setSrc] = useState<string | null>(tautulliSrc);
+
+  useEffect(() => {
+    const ratingKey = isTV ? item.grandparent_rating_key : item.rating_key;
+    const type = isTV ? 'tv' : 'movie';
+    if (!ratingKey) return;
+
+    fetch(`/api/tmdb/id?rating_key=${encodeURIComponent(ratingKey)}`)
+      .then((r) => r.json())
+      .then((d: { tmdbId: string | null }) => {
+        if (d.tmdbId) setSrc(`/api/tmdb/poster?id=${d.tmdbId}&type=${type}&size=w200`);
+      })
+      .catch(() => {});
+  }, [item.rating_key, item.grandparent_rating_key, isTV]);
 
   function handleError() {
     if (tautulliSrc && src !== tautulliSrc) setSrc(tautulliSrc);

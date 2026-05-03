@@ -33,14 +33,10 @@ interface HomeStatItem {
   grandparent_thumb?: string;
   platform?: string;
   rating_key?: string;
+  grandparent_rating_key?: string;
   thumb?: string;
   title?: string;
   total_plays?: number;
-  // TMDB IDs — present in newer Tautulli versions
-  tmdb_id?: number | null;
-  guid?: string;
-  grandparent_guid?: string;
-  media_type?: string;
 }
 
 interface HomeStatsResponse {
@@ -55,12 +51,6 @@ interface HeatPoint { label: string; value: number; }
 
 function tautulliImage(path: string): string {
   return `/api/modules/tautulli?cmd=get_image&img=${encodeURIComponent(path)}`;
-}
-
-function parseTmdbId(guid?: string): string | null {
-  if (!guid) return null;
-  const m = guid.match(/^tmdb:\/\/(\d+)/);
-  return m ? m[1] : null;
 }
 
 function formatDuration(seconds: number): string {
@@ -150,8 +140,23 @@ function SectionCard({ title, children }: { title: string; children: React.React
   );
 }
 
-function Thumb({ src, fallbackSrc, alt }: { src?: string; fallbackSrc?: string; alt: string }) {
-  const [imgSrc, setImgSrc] = useState<string | null>(src ?? null);
+function Thumb({ ratingKey, tmdbType, fallbackSrc, alt }: {
+  ratingKey?: string;
+  tmdbType?: 'tv' | 'movie';
+  fallbackSrc?: string;
+  alt: string;
+}) {
+  const [imgSrc, setImgSrc] = useState<string | null>(fallbackSrc ?? null);
+
+  useEffect(() => {
+    if (!ratingKey || !tmdbType) return;
+    fetch(`/api/tmdb/id?rating_key=${encodeURIComponent(ratingKey)}`)
+      .then((r) => r.json())
+      .then((d: { tmdbId: string | null }) => {
+        if (d.tmdbId) setImgSrc(`/api/tmdb/poster?id=${d.tmdbId}&type=${tmdbType}&size=w92`);
+      })
+      .catch(() => {});
+  }, [ratingKey, tmdbType]);
 
   function handleError() {
     if (fallbackSrc && imgSrc !== fallbackSrc) setImgSrc(fallbackSrc);
@@ -176,10 +181,12 @@ function TopList({
   title,
   items,
   type = 'media',
+  tmdbType,
 }: {
   title: string;
   items: HomeStatItem[];
   type?: 'media' | 'user';
+  tmdbType?: 'tv' | 'movie';
 }) {
   return (
     <SectionCard title={title}>
@@ -193,21 +200,9 @@ function TopList({
                 ? (item.friendly_name ?? 'Unknown')
                 : (item.title ?? item.grandparent_title ?? 'Unknown');
             const plays = item.total_plays ?? item.count ?? 0;
-            // For show-level rows use grandparent_thumb if available (episode-level data);
-            // fall back to thumb for movies and show-aggregated rows.
             const posterPath = item.grandparent_thumb ?? item.thumb;
             const tautulliSrc = type !== 'user' && posterPath ? tautulliImage(posterPath) : undefined;
-
-            // Prefer TMDB poster; fall back to Tautulli proxy
-            const isTV = item.media_type === 'episode' || item.media_type === 'show';
-            const tmdbId = isTV
-              ? parseTmdbId(item.grandparent_guid) ?? (item.tmdb_id ? String(item.tmdb_id) : null)
-              : (item.tmdb_id ? String(item.tmdb_id) : parseTmdbId(item.guid));
-            const thumbSrc = type !== 'user'
-              ? (tmdbId
-                  ? `/api/tmdb/poster?id=${tmdbId}&type=${isTV ? 'tv' : 'movie'}&size=w92`
-                  : tautulliSrc)
-              : undefined;
+            const ratingKey = type !== 'user' ? (item.rating_key ?? item.grandparent_rating_key) : undefined;
             return (
               <li key={i} className="flex items-center gap-2.5">
                 <span className="text-xs font-semibold text-(--color-text-muted) w-4 text-right shrink-0">
@@ -218,7 +213,7 @@ function TopList({
                     {name.slice(0, 1).toUpperCase()}
                   </div>
                 ) : (
-                  <Thumb src={thumbSrc} fallbackSrc={tautulliSrc} alt={name} />
+                  <Thumb ratingKey={ratingKey} tmdbType={tmdbType} fallbackSrc={tautulliSrc} alt={name} />
                 )}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-(--color-text) truncate">{name}</p>
@@ -455,8 +450,8 @@ export default function StatsClient({ isAdmin, tautulliUserId }: Props) {
 
       {/* Top Lists */}
       <div className={`grid grid-cols-1 ${listCols} gap-6`}>
-        <TopList title="Top Shows" items={topShows} />
-        <TopList title="Top Movies" items={topMovies} />
+        <TopList title="Top Shows" items={topShows} tmdbType="tv" />
+        <TopList title="Top Movies" items={topMovies} tmdbType="movie" />
         {isAdmin && topUsers.length > 0 && (
           <TopList title="Top Users" items={topUsers} type="user" />
         )}

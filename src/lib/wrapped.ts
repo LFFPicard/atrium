@@ -10,6 +10,7 @@ export interface WrappedMediaItem {
   plays: number;
   thumb: string | null;
   mediaType: 'show' | 'movie';
+  ratingKey?: string;
 }
 
 export interface PlatformCount {
@@ -49,6 +50,7 @@ interface HomeStatsRow {
   title?: string;
   grandparent_title?: string;
   thumb?: string;
+  rating_key?: string;
   total_plays?: number;
   count?: number;
   platform?: string;
@@ -72,6 +74,8 @@ interface HistoryRow {
   parent_thumb?: string;
   grandparent_thumb?: string;
   media_type?: string;
+  rating_key?: string;
+  grandparent_rating_key?: string;
 }
 
 interface HistoryResp {
@@ -180,6 +184,7 @@ function rowToItem(r: HomeStatsRow, mediaType: 'show' | 'movie'): WrappedMediaIt
     plays: r.total_plays ?? r.count ?? 0,
     thumb: r.thumb ?? null,
     mediaType,
+    ratingKey: r.rating_key,
   };
 }
 
@@ -190,6 +195,7 @@ function histRowToItem(h: HistoryRow): WrappedMediaItem {
     plays: 1,
     thumb: h.grandparent_thumb ?? h.parent_thumb ?? h.thumb ?? null,
     mediaType: isMovie ? 'movie' : 'show',
+    ratingKey: isMovie ? h.rating_key : h.grandparent_rating_key,
   };
 }
 
