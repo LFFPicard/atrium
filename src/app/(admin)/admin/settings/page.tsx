@@ -1,5 +1,7 @@
 import { getSettings } from '@/lib/settings';
 import { ThemeVars } from '@/lib/themes';
+import { DEFAULT_WIDGET_CONFIG } from '@/lib/widgetConfig';
+import type { WidgetConfig } from '@/lib/widgetConfig';
 import SettingsClient from './SettingsClient';
 
 export default function AdminSettingsPage() {
@@ -17,6 +19,7 @@ export default function AdminSettingsPage() {
     'site_name',
     'admin_email',
     'tmdb_api_key',
+    'dashboard_config',
   ]);
 
   const initial = {
@@ -33,6 +36,7 @@ export default function AdminSettingsPage() {
     site_name: (raw.site_name as string) ?? 'Atrium',
     admin_email: (raw.admin_email as string) ?? '',
     tmdb_api_key: (raw.tmdb_api_key as string) ?? '',
+    dashboard_config: (raw.dashboard_config as WidgetConfig[] | null) ?? DEFAULT_WIDGET_CONFIG,
   };
 
   return (

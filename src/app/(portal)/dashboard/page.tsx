@@ -1,6 +1,6 @@
 import Link from 'next/link';
+import { Fragment } from 'react';
 import { auth } from '@/lib/auth/config';
-import ModuleGate from '@/components/layout/ModuleGate';
 import NowPlayingWidget from '@/components/modules/NowPlayingWidget';
 import RecentlyAddedWidget from '@/components/modules/RecentlyAddedWidget';
 import UptimeWidget from '@/components/modules/UptimeWidget';
@@ -13,6 +13,8 @@ import OverseerrWidget from '@/components/modules/OverseerrWidget';
 import LibraryStatsWidget from '@/components/modules/LibraryStatsWidget';
 import MessagesWidget from '@/components/modules/MessagesWidget';
 import { getDashboardWidgets } from '@/lib/dashboard';
+import { FULL_WIDTH_WIDGETS } from '@/lib/widgetConfig';
+import type { WidgetId } from '@/lib/widgetConfig';
 import { getAllTabs } from '@/lib/tabs';
 import { getSetting } from '@/lib/settings';
 import type { TabRow } from '@/lib/tabs';
@@ -53,6 +55,26 @@ function EmptyDashboard({ isAdmin }: { isAdmin: boolean }) {
   );
 }
 
+function renderWidget(
+  id: WidgetId,
+  opts: { isAdmin: boolean; username: string; visibleTabs: TabRow[] },
+): React.ReactNode {
+  const { isAdmin, username, visibleTabs } = opts;
+  switch (id) {
+    case 'now-playing':    return <NowPlayingWidget />;
+    case 'recently-added': return <RecentlyAddedWidget />;
+    case 'stats':          return <StatsWidget isAdmin={isAdmin} />;
+    case 'library-stats':  return <LibraryStatsWidget />;
+    case 'wrapped':        return <WrappedWidget />;
+    case 'messages':       return <MessagesWidget />;
+    case 'overseerr':      return <OverseerrWidget isAdmin={isAdmin} username={username} />;
+    case 'calendar':       return <CalendarWidget />;
+    case 'uptime':         return <UptimeWidget isAdmin={isAdmin} />;
+    case 'quick-links':    return visibleTabs.length > 0 ? <QuickLinksWidget tabs={visibleTabs} /> : null;
+    default:               return null;
+  }
+}
+
 export default async function DashboardPage() {
   const session = await auth();
   const username = session?.user?.username ?? 'there';
@@ -60,7 +82,9 @@ export default async function DashboardPage() {
   const isAdmin = userRole === 'admin';
 
   const activeWidgets = getDashboardWidgets(userRole);
-  const isEmpty = activeWidgets.length === 0;
+
+  // 'messages' manages its own visibility client-side — exclude it from the module-based empty check
+  const isEmpty = activeWidgets.filter((id) => id !== 'messages').length === 0;
 
   const allTabs = getAllTabs();
   const visibleTabs: TabRow[] = allTabs.filter(
@@ -73,6 +97,8 @@ export default async function DashboardPage() {
   const donationLabel = getSetting<string>('donation_label') ?? 'Support this server';
   const showDonationWidget = donationEnabled && !!donationUrl && donationPlacement === 'dashboard';
 
+  const opts = { isAdmin, username, visibleTabs };
+
   return (
     <div>
       <div className="mb-6">
@@ -82,63 +108,29 @@ export default async function DashboardPage() {
         <p className="text-sm text-(--color-text-muted) mt-0.5">Your homelab at a glance.</p>
       </div>
 
-      {/* Messages widget — self-hiding when inbox is clear, always rendered */}
-      <MessagesWidget />
-
       {isEmpty ? (
-        <EmptyDashboard isAdmin={isAdmin} />
+        <>
+          {/* Still show messages widget even when no modules are active */}
+          {activeWidgets.includes('messages') && (
+            <div className="mb-6">
+              <MessagesWidget />
+            </div>
+          )}
+          <EmptyDashboard isAdmin={isAdmin} />
+        </>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Now Playing — full width */}
-          <ModuleGate slug="tautulli">
-            <div className="md:col-span-2">
-              <NowPlayingWidget />
-            </div>
-          </ModuleGate>
+          {activeWidgets.map((id) => {
+            const el = renderWidget(id, opts);
+            if (!el) return null;
+            return FULL_WIDTH_WIDGETS.has(id) ? (
+              <div key={id} className="md:col-span-2">{el}</div>
+            ) : (
+              <Fragment key={id}>{el}</Fragment>
+            );
+          })}
 
-          {/* Recently Added — full width */}
-          <ModuleGate slug="tautulli">
-            <div className="md:col-span-2">
-              <RecentlyAddedWidget />
-            </div>
-          </ModuleGate>
-
-          {/* Stats — single column */}
-          {activeWidgets.includes('stats') && <StatsWidget isAdmin={isAdmin} />}
-
-          {/* Library Stats — single column */}
-          {activeWidgets.includes('library-stats') && (
-            <ModuleGate slug="tautulli">
-              <LibraryStatsWidget />
-            </ModuleGate>
-          )}
-
-          {/* Wrapped — single column */}
-          {activeWidgets.includes('wrapped') && <WrappedWidget />}
-
-          {/* Overseerr requests — single column */}
-          {activeWidgets.includes('overseerr') && <OverseerrWidget isAdmin={isAdmin} username={username} />}
-
-          {/* Calendar — full width */}
-          {activeWidgets.includes('calendar') && (
-            <div className="md:col-span-2">
-              <CalendarWidget />
-            </div>
-          )}
-
-          {/* Uptime — single column */}
-          <ModuleGate slug="uptime">
-            <UptimeWidget isAdmin={isAdmin} />
-          </ModuleGate>
-
-          {/* Quick Links — full width, no module gate */}
-          {visibleTabs.length > 0 && (
-            <div className="md:col-span-2">
-              <QuickLinksWidget tabs={visibleTabs} />
-            </div>
-          )}
-
-          {/* Donation — dashboard placement only */}
+          {/* Donation widget — placement-controlled, always at the end */}
           {showDonationWidget && (
             <DonationWidget url={donationUrl} label={donationLabel} />
           )}

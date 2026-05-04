@@ -1,10 +1,16 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import ColourPicker from '@/components/admin/ColourPicker';
 import { themes, ThemeVars } from '@/lib/themes';
+import {
+  WIDGET_DISPLAY_NAMES,
+  WIDGET_REQUIRED_MODULE,
+  DEFAULT_WIDGET_CONFIG,
+} from '@/lib/widgetConfig';
+import type { WidgetConfig, WidgetId } from '@/lib/widgetConfig';
 
-type Tab = 'appearance' | 'login' | 'donations' | 'general';
+type Tab = 'appearance' | 'login' | 'donations' | 'general' | 'dashboard';
 
 interface InitialSettings {
   theme_preset: string;
@@ -20,6 +26,7 @@ interface InitialSettings {
   site_name: string;
   admin_email: string;
   tmdb_api_key: string;
+  dashboard_config: WidgetConfig[];
 }
 
 const VAR_GROUPS: { label: string; vars: (keyof ThemeVars)[] }[] = [
@@ -46,6 +53,14 @@ const VAR_LABELS: Record<keyof ThemeVars, string> = {
   '--color-button-text': 'Button text',
   '--color-border': 'Borders',
 };
+
+function moduleLabel(id: WidgetId): string {
+  const req = WIDGET_REQUIRED_MODULE[id];
+  if (!req) return '';
+  if (req === 'tabs') return 'Active tabs';
+  if (Array.isArray(req)) return req.map((r) => r.charAt(0).toUpperCase() + r.slice(1)).join(' or ');
+  return req.charAt(0).toUpperCase() + req.slice(1);
+}
 
 function Toast({ message, onDone }: { message: string; onDone: () => void }) {
   useEffect(() => {
@@ -81,6 +96,17 @@ export default function SettingsClient({ initial }: { initial: InitialSettings }
   const [adminEmail, setAdminEmail] = useState(initial.admin_email);
   const [tmdbApiKey, setTmdbApiKey] = useState(initial.tmdb_api_key);
 
+  // Dashboard widget config
+  const [dashboardConfig, setDashboardConfig] = useState<WidgetConfig[]>(() => {
+    // Merge stored config with defaults — ensure all known widgets are present
+    const stored = initial.dashboard_config;
+    const storedIds = new Set(stored.map((c) => c.id));
+    const missing = DEFAULT_WIDGET_CONFIG.filter((c) => !storedIds.has(c.id));
+    return [...stored, ...missing];
+  });
+  const dragIdxRef = useRef<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+
   const activeTheme = themes.find((t) => t.id === themePreset) ?? themes[0];
 
   useEffect(() => {
@@ -112,6 +138,43 @@ export default function SettingsClient({ initial }: { initial: InitialSettings }
     setOverrides({});
   };
 
+  // Dashboard drag-and-drop handlers
+  function handleDragStart(e: React.DragEvent, idx: number) {
+    dragIdxRef.current = idx;
+    e.dataTransfer.effectAllowed = 'move';
+  }
+
+  function handleDragOver(e: React.DragEvent, idx: number) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverIdx(idx);
+  }
+
+  function handleDrop(e: React.DragEvent, targetIdx: number) {
+    e.preventDefault();
+    const fromIdx = dragIdxRef.current;
+    dragIdxRef.current = null;
+    setDragOverIdx(null);
+    if (fromIdx === null || fromIdx === targetIdx) return;
+    setDashboardConfig((prev) => {
+      const next = [...prev];
+      const [item] = next.splice(fromIdx, 1);
+      next.splice(targetIdx, 0, item);
+      return next;
+    });
+  }
+
+  function handleDragEnd() {
+    dragIdxRef.current = null;
+    setDragOverIdx(null);
+  }
+
+  function toggleWidget(id: WidgetId) {
+    setDashboardConfig((prev) =>
+      prev.map((w) => (w.id === id ? { ...w, enabled: !w.enabled } : w)),
+    );
+  }
+
   async function save() {
     setSaving(true);
     try {
@@ -132,6 +195,7 @@ export default function SettingsClient({ initial }: { initial: InitialSettings }
           site_name: siteName,
           admin_email: adminEmail,
           tmdb_api_key: tmdbApiKey,
+          dashboard_config: dashboardConfig,
         }),
       });
       setToast('Settings saved');
@@ -145,6 +209,7 @@ export default function SettingsClient({ initial }: { initial: InitialSettings }
     { id: 'login', label: 'Login Page' },
     { id: 'donations', label: 'Donations' },
     { id: 'general', label: 'General' },
+    { id: 'dashboard', label: 'Dashboard' },
   ];
 
   return (
@@ -420,6 +485,84 @@ export default function SettingsClient({ initial }: { initial: InitialSettings }
               .
             </p>
           </div>
+        </div>
+      )}
+
+      {/* Dashboard */}
+      {activeTab === 'dashboard' && (
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-sm font-semibold text-(--color-text) mb-1">Widget order &amp; visibility</h2>
+            <p className="text-xs text-(--color-text-muted)">
+              Drag to reorder. Toggle to show or hide each widget. Widgets whose required module is not enabled will not appear regardless of this setting.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            {dashboardConfig.map((widget, idx) => {
+              const label = WIDGET_DISPLAY_NAMES[widget.id];
+              const modLabel = moduleLabel(widget.id);
+              const isOver = dragOverIdx === idx;
+              return (
+                <div
+                  key={widget.id}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, idx)}
+                  onDragOver={(e) => handleDragOver(e, idx)}
+                  onDrop={(e) => handleDrop(e, idx)}
+                  onDragEnd={handleDragEnd}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border transition-colors select-none ${
+                    isOver
+                      ? 'border-(--color-accent) bg-(--color-accent)/5'
+                      : 'border-(--color-border) bg-(--color-bg)'
+                  }`}
+                >
+                  {/* Drag handle */}
+                  <div className="cursor-grab shrink-0 text-(--color-text-muted) hover:text-(--color-text)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                      <line x1="8" y1="6" x2="21" y2="6" />
+                      <line x1="8" y1="12" x2="21" y2="12" />
+                      <line x1="8" y1="18" x2="21" y2="18" />
+                      <line x1="3" y1="6" x2="3.01" y2="6" />
+                      <line x1="3" y1="12" x2="3.01" y2="12" />
+                      <line x1="3" y1="18" x2="3.01" y2="18" />
+                    </svg>
+                  </div>
+
+                  {/* Label + module requirement */}
+                  <div className="flex-1 min-w-0 flex items-baseline gap-2">
+                    <span className="text-sm font-medium text-(--color-text)">{label}</span>
+                    {modLabel && (
+                      <span className="text-xs text-(--color-text-muted) truncate">· {modLabel}</span>
+                    )}
+                  </div>
+
+                  {/* Toggle */}
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={widget.enabled}
+                    onClick={() => toggleWidget(widget.id)}
+                    className={`relative shrink-0 w-10 h-6 rounded-full transition-colors ${
+                      widget.enabled ? 'bg-(--color-accent)' : 'bg-(--color-border)'
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-1 w-4 h-4 rounded-full transition-transform ${
+                        widget.enabled
+                          ? 'translate-x-5 bg-(--color-accent-text)'
+                          : 'translate-x-1 bg-(--color-text-muted)'
+                      }`}
+                    />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+
+          <p className="text-xs text-(--color-text-muted) pt-1">
+            Changes take effect after saving.
+          </p>
         </div>
       )}
 
